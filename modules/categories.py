@@ -10,8 +10,16 @@ tooltip / caption next to each category in the UI.
 """
 from __future__ import annotations
 
+import json
+import os
 import random
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+
+from .llm import ask_json
+
+_DATA_DIR = os.path.dirname(os.path.dirname(__file__))
+_GEN_FILE = os.path.join(_DATA_DIR, "generated_categories.json")
+_HISTORY_FILE = os.path.join(_DATA_DIR, "analysis_history.json")
 
 
 @dataclass(frozen=True)
@@ -75,16 +83,131 @@ CURATED: tuple[CuratedCategory, ...] = (
 )
 
 
+# --------------------------------------------------------------------------
+# Persistence: AI-generated categories + analysis history
+# --------------------------------------------------------------------------
+def _read_json(path: str, default):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _write_json(path: str, data) -> None:
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+
+
+def _coerce(item: dict) -> CuratedCategory | None:
+    if not isinstance(item, dict) or not str(item.get("name", "")).strip():
+        return None
+
+    def rate(v) -> int:
+        try:
+            return max(1, min(3, int(v)))
+        except (TypeError, ValueError):
+            return 2
+
+    return CuratedCategory(
+        name=str(item["name"]).strip(),
+        margin=rate(item.get("margin")),
+        demand=rate(item.get("demand")),
+        competition=rate(item.get("competition")),
+        reason=str(item.get("reason", "")).strip() or "AI 추천 트렌딩 카테고리.",
+    )
+
+
+def load_generated() -> list[CuratedCategory]:
+    out: list[CuratedCategory] = []
+    for item in _read_json(_GEN_FILE, []):
+        cat = _coerce(item)
+        if cat is not None:
+            out.append(cat)
+    return out
+
+
+def load_history() -> set[str]:
+    return {str(n).strip() for n in _read_json(_HISTORY_FILE, []) if str(n).strip()}
+
+
+def mark_analyzed(*category_names: str) -> None:
+    hist = load_history()
+    hist.update(n.strip() for n in category_names if n.strip())
+    _write_json(_HISTORY_FILE, sorted(hist))
+
+
+def all_categories() -> tuple[CuratedCategory, ...]:
+    """Seed categories first, then AI-generated ones, deduped by lowercased name."""
+    seen: set[str] = set()
+    out: list[CuratedCategory] = []
+    for cat in (*CURATED, *load_generated()):
+        key = cat.name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cat)
+    return tuple(out)
+
+
 def names() -> list[str]:
-    return [c.name for c in CURATED]
+    return [c.name for c in all_categories()]
 
 
 def by_name(name: str) -> CuratedCategory | None:
-    for c in CURATED:
+    for c in all_categories():
         if c.name == name:
             return c
     return None
 
 
 def random_category() -> CuratedCategory:
-    return random.choice(CURATED)
+    return random.choice(all_categories())
+
+
+def generate_new_categories(n: int = 20) -> list[CuratedCategory]:
+    """Ask Claude for `n` trending dropshipping categories not used before.
+
+    The new categories are appended to ``generated_categories.json`` (deduped)
+    and the full generated list is returned. Returns ``[]`` if the API is
+    unavailable or returns nothing usable.
+    """
+    exclude = {c.name.lower() for c in all_categories()} | {h.lower() for h in load_history()}
+    prompt = (
+        "You are a dropshipping market analyst. List "
+        f"{n} CURRENTLY TRENDING dropshipping product categories suitable for a "
+        "brand-new store. Do NOT include any of these already-used categories "
+        f"(case-insensitive): {sorted(exclude)}. For each category rate "
+        "`margin`, `demand`, `competition` on a 1-3 scale where 3 is most "
+        "favorable (competition: 3 = least crowded). Give a one-line Korean "
+        "`reason` referencing margin/demand/competition. Return ONLY a JSON "
+        'array: [{"name": "<English>", "margin": 1-3, "demand": 1-3, '
+        '"competition": 1-3, "reason": "<Korean>"}]. No prose.'
+    )
+    data = ask_json(prompt, max_tokens=2048)
+    if not isinstance(data, list):
+        return []
+
+    fresh: list[CuratedCategory] = []
+    seen = set(exclude)
+    for item in data:
+        cat = _coerce(item)
+        if cat is None or cat.name.lower() in seen:
+            continue
+        seen.add(cat.name.lower())
+        fresh.append(cat)
+        if len(fresh) >= n:
+            break
+    if not fresh:
+        return []
+
+    combined = load_generated() + fresh
+    deduped: list[CuratedCategory] = []
+    seen_keys: set[str] = {c.name.lower() for c in CURATED}
+    for cat in combined:
+        if cat.name.lower() in seen_keys:
+            continue
+        seen_keys.add(cat.name.lower())
+        deduped.append(cat)
+    _write_json(_GEN_FILE, [asdict(c) for c in deduped])
+    return deduped

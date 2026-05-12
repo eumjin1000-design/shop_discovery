@@ -66,20 +66,25 @@ def run_pipeline(category: str, *, target_market: str = "US", currency: str = "U
     )
 
 
-def run_all_curated(progress=None) -> list[tuple[str, PipelineResult]]:
-    """Run the pipeline for every curated category, returned best-score-first.
+def run_all_curated(progress=None, only_unanalyzed: bool = False) -> list[tuple[str, PipelineResult]]:
+    """Run the pipeline for every known category, returned best-score-first.
 
     ``progress`` (optional) is called as ``progress(done, total, name)`` after
-    each category so a GUI can render a progress bar.
+    each category so a GUI can render a progress bar. If ``only_unanalyzed`` is
+    set, categories already in the analysis history are skipped.
     """
     from modules import categories
 
-    cats = categories.CURATED
+    cats = list(categories.all_categories())
+    if only_unanalyzed:
+        done = categories.load_history()
+        cats = [c for c in cats if c.name not in done] or cats
     results: list[tuple[str, PipelineResult]] = []
     for i, cat in enumerate(cats, start=1):
         results.append((cat.name, run_pipeline(cat.name)))
         if progress is not None:
             progress(i, len(cats), cat.name)
+    categories.mark_analyzed(*(c.name for c in cats))
     results.sort(key=lambda pair: pair[1].verdict.total_score, reverse=True)
     return results
 
