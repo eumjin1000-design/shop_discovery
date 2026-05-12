@@ -24,8 +24,7 @@ except ImportError:
 
 import app_render as ui
 from main import run_all_curated, run_pipeline
-from modules import categories
-from modules.llm import is_available
+from modules import categories, llm, verdict_ai
 from modules.models import PipelineResult
 
 # --------------------------------------------------------------------------
@@ -33,10 +32,16 @@ st.set_page_config(page_title="Shop Discovery", page_icon="🐙", layout="center
 st.title("🐙 Shop Discovery")
 st.caption("드랍쇼핑 신규 샵 발굴 자동화 — 카테고리 입력 → Go/No-Go 판정 → Excel 리포트")
 
-if not is_available():
+if llm.any_available():
+    st.caption(
+        f"🤖 LLM: **{llm.provider_label()}** — 대량 작업은 Gemini Flash(무료), "
+        "샵 이름·판정 요약은 Claude Sonnet 우선 (없으면 상호 폴백)"
+    )
+else:
     st.info(
-        "ANTHROPIC_API_KEY 가 설정되지 않아 데이터 모듈이 결정론적 mock 으로 동작합니다. "
-        "(같은 카테고리는 항상 같은 결과) — 실데이터 연동 전까지 의사결정 참고용으로만 사용하세요.",
+        "LLM API 키가 없어 데이터 모듈이 결정론적 mock 으로 동작합니다. "
+        "(.env 의 GOOGLE_API_KEY / ANTHROPIC_API_KEY 설정 후 재시작) "
+        "— 같은 카테고리는 항상 같은 결과, 의사결정 참고용으로만 사용하세요.",
         icon="ℹ️",
     )
 
@@ -58,10 +63,10 @@ st.markdown("**드랍쇼핑 카테고리** — 마진·수요·경쟁 기준 선
 _hist = categories.load_history()
 
 if st.button("🔄 새 카테고리 20개 생성 (AI 트렌딩)", use_container_width=True):
-    if not is_available():
-        st.warning("ANTHROPIC_API_KEY 가 필요합니다. (.env 설정 후 재시작)", icon="⚠️")
+    if not llm.any_available():
+        st.warning("LLM API 키가 필요합니다 (GOOGLE_API_KEY 또는 ANTHROPIC_API_KEY). .env 설정 후 재시작", icon="⚠️")
     else:
-        with st.spinner("Claude 로 트렌딩 카테고리 생성 중..."):
+        with st.spinner("AI(Gemini Flash 우선)로 트렌딩 카테고리 생성 중..."):
             gen = categories.generate_new_categories(20)
         if gen:
             st.toast(f"🔄 카테고리 목록 갱신 — 총 AI 추천 {len(gen)}개")
@@ -174,6 +179,17 @@ if result is not None:
             unsafe_allow_html=True,
         )
     st.write(v.summary)
+
+    # AI-written nuanced summary (quality tier — Claude Sonnet first). Cached
+    # per category+decision so it is not regenerated on every rerun.
+    if llm.any_available():
+        key = (v.category, v.decision, round(v.total_score, 1))
+        if st.session_state.get("ai_summary_key") != key:
+            with st.spinner("AI 판정 요약 작성 중..."):
+                st.session_state["ai_summary"] = verdict_ai.ai_verdict_summary(v)
+            st.session_state["ai_summary_key"] = key
+        if st.session_state.get("ai_summary"):
+            st.info(st.session_state["ai_summary"], icon="🤖")
 
     st.subheader("스코어카드 (100점)")
     for line in v.breakdown:

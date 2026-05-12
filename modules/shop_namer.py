@@ -40,7 +40,7 @@ def _from_llm(category: str, n: int) -> list[ShopName]:
         "available. For each give a one-line concept. Return ONLY a JSON array: "
         '[{"name": "...", "concept": "..."}]. No prose.'
     )
-    data = ask_json(prompt, max_tokens=800)
+    data = ask_json(prompt, tier="quality", max_tokens=800)
     if not isinstance(data, list):
         return []
     out: list[ShopName] = []

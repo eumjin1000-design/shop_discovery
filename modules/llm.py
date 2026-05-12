@@ -1,8 +1,20 @@
-"""Thin wrapper around the Anthropic API with graceful offline fallback.
+"""LLM access with a free-first / quality-tier strategy + offline fallback.
 
-Every module that needs an LLM goes through :func:`ask_json`. If no API key
-is configured (or the SDK call fails), callers receive ``None`` and are
-expected to fall back to a deterministic heuristic so the pipeline still runs.
+Tiers
+-----
+    "fast"     - Gemini Flash (free) first, then Claude Sonnet, then None.
+                 Bulk work: category analysis, sourcing lists, generating new
+                 trending categories.
+    "quality"  - Claude Sonnet first, then Gemini Flash, then None.
+                 Creativity / nuance: shop-name ideas, Go/No-Go summary.
+
+Resolution per tier: try the primary provider, then the secondary, then give
+up. Callers that receive ``None`` must fall back to a deterministic heuristic.
+
+Keys come from the environment (loaded from .env by the app):
+    ANTHROPIC_API_KEY   - Claude
+    GOOGLE_API_KEY      - Gemini
+    GEMINI_MODEL        - optional override (default: gemini-2.0-flash)
 """
 from __future__ import annotations
 
@@ -11,54 +23,120 @@ import os
 import re
 from typing import Any, Optional
 
-_MODEL = "claude-sonnet-4-6"
+_CLAUDE_MODEL = "claude-sonnet-4-6"
 
 
-def _client():
-    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    # The starter .env ships a placeholder; treat it as "not configured".
-    if not key or key.startswith("여기에") or key == "여기에_API키_입력":
+def _gemini_model_name() -> str:
+    return os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.0-flash"
+
+
+# --------------------------------------------------------------------------
+# Key helpers — a value that is empty or still the .env placeholder counts as
+# "not configured".
+# --------------------------------------------------------------------------
+def _key(name: str) -> Optional[str]:
+    value = os.environ.get(name, "").strip()
+    if not value or value.startswith("여기에"):
+        return None
+    return value
+
+
+def _anthropic_key() -> Optional[str]:
+    return _key("ANTHROPIC_API_KEY")
+
+
+def _google_key() -> Optional[str]:
+    return _key("GOOGLE_API_KEY")
+
+
+# --------------------------------------------------------------------------
+# Provider calls — each returns raw response text, or None on any failure.
+# --------------------------------------------------------------------------
+def _call_gemini(prompt: str, max_tokens: int) -> Optional[str]:
+    key = _google_key()
+    if key is None:
+        return None
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(_gemini_model_name())
+        resp = model.generate_content(
+            prompt, generation_config={"max_output_tokens": max_tokens}
+        )
+        return resp.text or None
+    except Exception:
+        return None
+
+
+def _call_claude(prompt: str, max_tokens: int) -> Optional[str]:
+    key = _anthropic_key()
+    if key is None:
         return None
     try:
         import anthropic
-    except ImportError:
-        return None
-    try:
-        return anthropic.Anthropic(api_key=key)
-    except Exception:
-        return None
 
-
-def is_available() -> bool:
-    return _client() is not None
-
-
-def ask_json(prompt: str, *, max_tokens: int = 1024) -> Optional[Any]:
-    """Send ``prompt`` and parse the model's reply as JSON.
-
-    Returns the parsed object, or ``None`` when the API is unavailable or the
-    reply cannot be parsed. Never raises — failures degrade to ``None``.
-    """
-    client = _client()
-    if client is None:
-        return None
-    try:
+        client = anthropic.Anthropic(api_key=key)
         msg = client.messages.create(
-            model=_MODEL,
-            max_tokens=max_tokens,
+            model=_CLAUDE_MODEL, max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
-        text = "".join(
-            block.text for block in msg.content if getattr(block, "type", "") == "text"
-        )
+        return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text") or None
     except Exception:
+        return None
+
+
+_TIER_ORDER = {
+    "fast": (_call_gemini, _call_claude),
+    "quality": (_call_claude, _call_gemini),
+}
+
+
+def _ask_raw(prompt: str, tier: str, max_tokens: int) -> Optional[str]:
+    for call in _TIER_ORDER.get(tier, _TIER_ORDER["fast"]):
+        text = call(prompt, max_tokens)
+        if text:
+            return text
+    return None
+
+
+# --------------------------------------------------------------------------
+# Public API
+# --------------------------------------------------------------------------
+def any_available() -> bool:
+    return bool(_anthropic_key() or _google_key())
+
+
+def is_available(tier: str = "fast") -> bool:
+    return any_available()  # both tiers can fall back to the other provider
+
+
+def provider_label() -> str:
+    g, c = _google_key() is not None, _anthropic_key() is not None
+    if g and c:
+        return "Gemini Flash(무료) + Claude Sonnet"
+    if g:
+        return "Gemini Flash(무료)"
+    if c:
+        return "Claude Sonnet"
+    return "없음 (mock 데이터)"
+
+
+def ask_text(prompt: str, *, tier: str = "fast", max_tokens: int = 1024) -> Optional[str]:
+    text = _ask_raw(prompt, tier, max_tokens)
+    return text.strip() if text else None
+
+
+def ask_json(prompt: str, *, tier: str = "fast", max_tokens: int = 1024) -> Optional[Any]:
+    """Send ``prompt`` and parse the reply as JSON; ``None`` on any failure."""
+    text = _ask_raw(prompt, tier, max_tokens)
+    if not text:
         return None
     return _extract_json(text)
 
 
 def _extract_json(text: str) -> Optional[Any]:
     text = text.strip()
-    # Strip ```json fences if present.
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
     if fenced:
         text = fenced.group(1).strip()
@@ -66,7 +144,6 @@ def _extract_json(text: str) -> Optional[Any]:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # Last resort: grab the first balanced {...} or [...] block.
     match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
     if match:
         try:
