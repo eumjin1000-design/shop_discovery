@@ -44,6 +44,50 @@ def ko(name: str) -> str:
     return FACTOR_KO.get(name, name)
 
 
+def render_header(provider_label: str, llm_on: bool) -> None:
+    """Left: 🐙 logo + subtitle. Right: Gemini+Claude (or mock) badge."""
+    badge_bg, badge_fg, icon = (("#ede7f6", "#5e35b1", "🤖") if llm_on
+                                else ("#f5f5f5", "#999999", "⚠️"))
+    st.markdown(
+        f"""
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:4px 0 12px;border-bottom:1px solid #ececec;margin-bottom:16px">
+          <div>
+            <div style="font-size:30px;font-weight:800;line-height:1.1">🐙 샵 디스커버리</div>
+            <div style="color:#777;font-size:13px;margin-top:3px">
+              드랍쇼핑 신규 샵 발굴 자동화 — 카테고리 → Go/No-Go 판정 → Excel 리포트</div>
+          </div>
+          <div style="background:{badge_bg};color:{badge_fg};border-radius:18px;
+                      padding:6px 14px;font-size:12.5px;font-weight:700;white-space:nowrap">
+            {icon} {provider_label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_verdict_panel(verdict) -> None:
+    """Gauge on the left; big score number + GO/WATCH badge on the right."""
+    color = DECISION_COLOR.get(verdict.decision, "#555")
+    emoji = DECISION_EMOJI.get(verdict.decision, "")
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;gap:20px;border:1px solid #ececec;
+                    border-radius:14px;padding:14px 20px;background:#fff">
+          <div>{gauge_svg(verdict.total_score, verdict.decision)}</div>
+          <div style="flex:1;text-align:right">
+            <div style="font-size:62px;font-weight:900;color:{color};line-height:1">
+              {verdict.total_score:.0f}<span style="font-size:22px;color:#bbb"> / 100</span></div>
+            <div style="font-size:30px;font-weight:800;color:{color}">{emoji} {verdict.decision}</div>
+            <div style="color:#999;font-size:12px;margin-top:4px">
+              임계값: ≥70 GO · 50–69 WATCH · &lt;50 NO-GO</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def gauge_svg(score: float, decision: str) -> str:
     """Return an inline SVG semicircular gauge for a 0..100 score."""
     color = DECISION_COLOR.get(decision, "#555")

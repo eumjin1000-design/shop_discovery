@@ -49,13 +49,15 @@ def _badge(decision: str | None) -> str:
 def _card_html(cat, emoji: str, decision: str | None, selected: bool) -> str:
     border = "2px solid #1967d2" if selected else "1px solid #e3e3e3"
     bg = "#eef4fe" if selected else "#ffffff"
+    shadow = "0 3px 10px rgba(25,103,210,.18)" if selected else "0 1px 3px rgba(0,0,0,.05)"
     return (
-        f'<div style="border:{border};background:{bg};border-radius:10px;'
-        f'padding:9px 11px;min-height:104px">'
-        f'<div style="display:flex;justify-content:space-between;align-items:center">'
-        f'<span style="font-size:22px">{emoji}</span>{_badge(decision)}</div>'
-        f'<div style="font-weight:600;font-size:12.5px;line-height:1.25;margin:5px 0 4px">{cat.name}</div>'
-        f'<div style="font-size:11px;color:#666">마진 {_stars(cat.margin)} · 수요 {_stars(cat.demand)}</div>'
+        f'<div style="border:{border};background:{bg};border-radius:14px;padding:13px 14px 10px;'
+        f'box-shadow:{shadow};min-height:152px">'
+        f'<div style="display:flex;justify-content:flex-end;height:18px">{_badge(decision)}</div>'
+        f'<div style="font-size:46px;text-align:center;line-height:1;margin:1px 0 8px">{emoji}</div>'
+        f'<div style="font-weight:700;font-size:13.5px;line-height:1.3;text-align:center;min-height:34px">{cat.name}</div>'
+        f'<div style="font-size:12px;color:#666;text-align:center;margin-top:6px">'
+        f'마진 {_stars(cat.margin)}&nbsp;&nbsp;·&nbsp;&nbsp;수요 {_stars(cat.demand)}</div>'
         f'</div>'
     )
 
@@ -74,14 +76,15 @@ def render_stats(cats, decisions: dict[str, str | None], analyzed: int) -> None:
         )
 
 
-def render_manage_buttons() -> None:
-    """↩ 이전 목록 복원 · ✨ AI 새목록 · 🎲 랜덤 추천 (side by side)."""
-    st.caption(
-        "⚠️ **'✨ AI 새목록'** 클릭 시 기존 분석 이력이 초기화됩니다. 직전 목록·이력은 자동 백업되어 "
-        "**'↩ 이전 목록 복원'** 으로 되돌릴 수 있습니다."
+def render_list_header() -> None:
+    """'📂 카테고리 목록' label (left) + ↩복원 / ✨AI새목록 (right) + amber warning."""
+    c_label, c_restore, c_new = st.columns([2.4, 1.2, 1.0])
+    c_label.markdown(
+        "<div style='font-size:19px;font-weight:700;padding-top:6px'>📂 카테고리 목록</div>",
+        unsafe_allow_html=True,
     )
-    b1, b2, b3 = st.columns(3)
-    if b1.button("↩ 이전 목록 복원", use_container_width=True, disabled=not categories.has_backup()):
+    if c_restore.button("↩ 이전 목록 복원", use_container_width=True, type="secondary",
+                        disabled=not categories.has_backup()):
         if categories.restore_previous_list():
             st.session_state.pop("batch_rows", None)
             st.session_state.pop("result", None)
@@ -89,11 +92,10 @@ def render_manage_buttons() -> None:
             st.rerun()
         else:
             st.warning("복원할 백업이 없습니다.", icon="⚠️")
-    if b2.button("✨ AI 새목록", use_container_width=True):
+    if c_new.button("✨ AI 새목록", use_container_width=True, type="secondary"):
         if not llm.any_available():
             st.warning("LLM API 키가 필요합니다 (GOOGLE_API_KEY 또는 ANTHROPIC_API_KEY).", icon="⚠️")
         else:
-            st.warning("생성 시 기존 분석을 초기화합니다. 백업은 자동 저장됩니다.", icon="⚠️")
             with st.spinner("AI(Gemini Flash 우선)로 새 트렌딩 카테고리 20개 생성 중..."):
                 gen = categories.generate_new_categories(20, replace=True)
             if gen:
@@ -104,14 +106,16 @@ def render_manage_buttons() -> None:
                 st.rerun()
             else:
                 st.warning("새 카테고리를 받지 못했습니다. 잠시 후 다시 시도하세요.", icon="⚠️")
-    if b3.button("🎲 랜덤 추천", use_container_width=True):
-        rc = categories.random_category()
-        st.session_state["category_input"] = rc.name
-        st.toast(f"🎲 추천: {rc.name}")
-        st.rerun()
+    st.markdown(
+        "<div style='background:#fff8e1;border:1px solid #ffe082;border-radius:8px;"
+        "padding:8px 12px;color:#8d6e00;font-size:13px;margin:8px 0 12px'>"
+        "⚠️ <b>'✨ AI 새목록'</b> 생성 시 기존 분석 이력이 초기화됩니다. "
+        "직전 목록·이력은 자동 백업되어 <b>'↩ 이전 목록 복원'</b>으로 되돌릴 수 있습니다.</div>",
+        unsafe_allow_html=True,
+    )
 
 
-def render_category_grid(cats, decisions: dict[str, str | None], selected: str, cols: int = 5) -> None:
+def render_category_grid(cats, decisions: dict[str, str | None], selected: str, cols: int = 3) -> None:
     """Card grid; clicking a card's button selects that category."""
     for start in range(0, len(cats), cols):
         for col, cat in zip(st.columns(cols), cats[start:start + cols]):

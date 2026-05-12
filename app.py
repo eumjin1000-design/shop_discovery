@@ -3,11 +3,11 @@
 Run with:
     streamlit run app.py
 
-Category selection via a clickable card grid (emoji + stars + GO/WATCH badge),
-list-management buttons, summary stat cards, single-category analysis with a
-score gauge / scorecard / Excel / sourcing tools, a batch "전체 자동 분석" run,
-and a "📌 내 전략 기준" panel. Rendering lives in app_render.py and
-app_catalog_ui.py; the pipeline lives in main.run_pipeline.
+Layout: header (🐙 logo + LLM badge) · stat cards · category list (label +
+manage buttons + amber warning + 3-col card grid) · button row (랜덤 추천 ·
+전체 자동 분석) · single-category analysis (verdict panel + scorecard + 전략
+기준 + Excel/소싱). Rendering lives in app_render.py / app_catalog_ui.py; the
+pipeline lives in main.run_pipeline.
 """
 from __future__ import annotations
 
@@ -58,22 +58,8 @@ def _run_batch(names: list[str], label: str) -> None:
     st.rerun()
 
 # --------------------------------------------------------------------------
-st.set_page_config(page_title="Shop Discovery", page_icon="🐙", layout="centered")
-st.title("🐙 Shop Discovery")
-st.caption("드랍쇼핑 신규 샵 발굴 자동화 — 카테고리 입력 → Go/No-Go 판정 → Excel 리포트")
-
-if llm.any_available():
-    st.caption(
-        f"🤖 LLM: **{llm.provider_label()}** — 대량 작업은 Gemini Flash(무료), "
-        "샵 이름·판정 요약은 Claude Sonnet 우선 (없으면 상호 폴백)"
-    )
-else:
-    st.info(
-        "LLM API 키가 없어 데이터 모듈이 결정론적 mock 으로 동작합니다. "
-        "(.env 의 GOOGLE_API_KEY / ANTHROPIC_API_KEY 설정 후 재시작) "
-        "— 같은 카테고리는 항상 같은 결과, 의사결정 참고용으로만 사용하세요.",
-        icon="ℹ️",
-    )
+st.set_page_config(page_title="샵 디스커버리", page_icon="🐙", layout="centered")
+ui.render_header(llm.provider_label(), llm.any_available())
 
 st.session_state.setdefault("category_input", "")
 
@@ -91,20 +77,23 @@ if _live is not None:
 for _r in st.session_state.get("batch_rows", []):
     _dec_map.setdefault(_r["name"], _r.get("decision"))
 _cats = list(categories.all_categories())
+_n = len(_cats)
 _selected = st.session_state["category_input"].strip()
 
-st.subheader("🧭 카테고리 선택")
+# 1) Stat cards
 catalog.render_stats(_cats, _dec_map, len(categories.load_history()))
-catalog.render_manage_buttons()
-catalog.render_category_grid(_cats, _dec_map, _selected)
+st.divider()
 
-# Rationale of the currently selected curated category, if any.
+# 2) Category list area: label + manage buttons + amber warning + card grid
+catalog.render_list_header()
+catalog.render_category_grid(_cats, _dec_map, _selected, cols=3)
+
 _current = categories.by_name(_selected)
 if _current is not None:
     tag = "  ·  ✅ 분석완료" if _current.name in categories.load_history() else ""
     st.caption(f"💡 **{_current.name}**{tag} — {_current.stars()}  \n{_current.reason}")
 
-with st.expander(f"📋 카테고리 {len(_cats)}개 — 선정 기준 / 분석 이력 (표 보기)"):
+with st.expander(f"📋 카테고리 {_n}개 — 선정 기준 / 분석 이력 (표 보기)"):
     st.dataframe(
         [{"카테고리": c.name, "마진": "★" * c.margin, "수요": "★" * c.demand,
           "경쟁여유": "★" * c.competition,
@@ -113,15 +102,22 @@ with st.expander(f"📋 카테고리 {len(_cats)}개 — 선정 기준 / 분석 
         use_container_width=True, hide_index=True,
     )
 
-_n = len(_cats)
-_chunks = [(i, min(i + 10, _n)) for i in range(0, _n, 10)]   # [(0,10),(10,20),...]
-st.markdown("**자동 분석** — 10개 단위 부분 배치 또는 전체. 완료 즉시 아래 순위 테이블이 갱신됩니다.")
-_btn_cols = st.columns(len(_chunks) + 1)
-for _ci, (_a, _b) in enumerate(_chunks):
-    if _btn_cols[_ci].button(f"{_a + 1}~{_b}번 분석", use_container_width=True, key=f"batch_{_a}"):
-        _run_batch([c.name for c in _cats[_a:_b]], f"{_a + 1}~{_b}번")
-if _btn_cols[-1].button(f"🚀 전체 분석 ({_n}개)", type="primary", use_container_width=True, key="batch_all"):
+# 3) Button row: 🎲 랜덤 추천 (outline, left)  ·  ▷ 전체 N개 자동 분석 (red, right)
+_b_left, _b_right = st.columns([1, 1])
+if _b_left.button("🎲 랜덤 추천", use_container_width=True, type="secondary", key="rand_pick"):
+    _rc = categories.random_category()
+    st.session_state["category_input"] = _rc.name
+    st.toast(f"🎲 추천: {_rc.name}")
+    st.rerun()
+if _b_right.button(f"▷ 전체 {_n}개 자동 분석", use_container_width=True, type="primary", key="batch_all"):
     _run_batch([c.name for c in _cats], "전체")
+
+with st.expander("⏳ 10개 단위로 나눠 분석 (부분 배치)"):
+    _chunks = [(i, min(i + 10, _n)) for i in range(0, _n, 10)]
+    _ccols = st.columns(max(1, len(_chunks)))
+    for _ci, (_a, _b) in enumerate(_chunks):
+        if _ccols[_ci].button(f"{_a + 1}~{_b}번", use_container_width=True, key=f"batch_{_a}"):
+            _run_batch([c.name for c in _cats[_a:_b]], f"{_a + 1}~{_b}번")
 
 if st.session_state.get("batch_rows"):
     ui.render_batch(st.session_state["batch_rows"])
@@ -155,20 +151,9 @@ if submitted:
 result: PipelineResult | None = st.session_state.get("result")
 if result is not None:
     v = result.verdict
-    color = ui.DECISION_COLOR.get(v.decision, "#555")
-    emoji = ui.DECISION_EMOJI.get(v.decision, "")
 
-    st.divider()
-    g_col, d_col = st.columns([1, 1.3])
-    with g_col:
-        st.markdown(ui.gauge_svg(v.total_score, v.decision), unsafe_allow_html=True)
-    with d_col:
-        st.markdown(
-            f"<div style='font-size:40px;font-weight:800;color:{color}'>{emoji} {v.decision}</div>"
-            f"<div style='color:#666'>총점 {v.total_score:.1f} / 100 "
-            f"&nbsp;|&nbsp; 임계값: ≥70 GO · 50–69 WATCH · &lt;50 NO-GO</div>",
-            unsafe_allow_html=True,
-        )
+    st.subheader(f"📊 분석 결과 — {v.category}")
+    ui.render_verdict_panel(v)
     st.write(v.summary)
 
     # AI-written nuanced summary (quality tier — Claude Sonnet first). Cached
