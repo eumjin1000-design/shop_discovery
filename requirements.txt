@@ -1,0 +1,8 @@
+anthropic
+pytrends
+duckduckgo-search
+requests
+beautifulsoup4
+openpyxl
+python-dotenv
+streamlit
