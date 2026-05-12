@@ -1,5 +1,6 @@
 anthropic
 google-generativeai
+keepa
 pytrends
 duckduckgo-search
 requests
