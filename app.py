@@ -3,10 +3,11 @@
 Run with:
     streamlit run app.py
 
-Category input (free text + curated dropdown + 🎲 random), single-category
-analysis with a score gauge / scorecard / Excel download, a "🚀 20개 전체 자동
-분석" batch run, and a "📌 내 전략 기준" panel. All rendering lives in
-app_render.py; the pipeline lives in main.run_pipeline.
+Category selection via a clickable card grid (emoji + stars + GO/WATCH badge),
+list-management buttons, summary stat cards, single-category analysis with a
+score gauge / scorecard / Excel / sourcing tools, a batch "전체 자동 분석" run,
+and a "📌 내 전략 기준" panel. Rendering lives in app_render.py and
+app_catalog_ui.py; the pipeline lives in main.run_pipeline.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ try:
 except ImportError:
     pass
 
+import app_catalog_ui as catalog
 import app_render as ui
 from main import run_all_curated, run_pipeline
 from modules import categories, llm, verdict_ai

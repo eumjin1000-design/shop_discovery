@@ -84,7 +84,7 @@ def run_all_curated(progress=None, only_unanalyzed: bool = False) -> list[tuple[
         results.append((cat.name, run_pipeline(cat.name)))
         if progress is not None:
             progress(i, len(cats), cat.name)
-    categories.mark_analyzed(*(c.name for c in cats))
+    categories.record_decisions({name: res.verdict.decision for name, res in results})
     results.sort(key=lambda pair: pair[1].verdict.total_score, reverse=True)
     return results
 

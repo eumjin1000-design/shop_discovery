@@ -30,6 +30,15 @@ _ROW_BG = {"GO": "background-color:#e6f4ea",
            "WATCH": "background-color:#fef7e0",
            "NO-GO": "background-color:#fce8e6"}
 
+# Icon per scorecard factor (keyed by the Korean label).
+FACTOR_ICON = {
+    "마진/단위 경제성": "💰",
+    "검색 트렌드": "📈",
+    "시장 및 경쟁(BSR)": "🏪",
+    "리뷰 기회": "⭐",
+    "구매 의도": "🛒",
+}
+
 
 def ko(name: str) -> str:
     return FACTOR_KO.get(name, name)
@@ -55,14 +64,15 @@ def gauge_svg(score: float, decision: str) -> str:
     """
 
 
-def factor_bar(name: str, score: float, max_score: float, detail: str) -> None:
+def factor_bar(name: str, score: float, max_score: float, detail: str, icon: str | None = None) -> None:
     pct = score / max_score if max_score else 0.0
     hue = int(120 * pct)  # red -> green
+    icon = icon or FACTOR_ICON.get(name, "•")
     st.markdown(
         f"""
         <div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:14px">
-            <span><b>{name}</b></span><span>{score:.1f} / {max_score:.0f}</span>
+            <span><b>{icon} {name}</b></span><span>{score:.1f} / {max_score:.0f}</span>
           </div>
           <div style="background:#eee;border-radius:6px;height:14px;overflow:hidden">
             <div style="width:{pct*100:.1f}%;height:100%;background:hsl({hue},70%,45%)"></div>

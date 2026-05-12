@@ -20,6 +20,8 @@ from .llm import ask_json
 _DATA_DIR = os.path.dirname(os.path.dirname(__file__))
 _GEN_FILE = os.path.join(_DATA_DIR, "generated_categories.json")
 _HISTORY_FILE = os.path.join(_DATA_DIR, "analysis_history.json")
+_GEN_BAK = os.path.join(_DATA_DIR, "generated_categories.bak.json")
+_HISTORY_BAK = os.path.join(_DATA_DIR, "analysis_history.bak.json")
 
 
 @dataclass(frozen=True)
@@ -127,14 +129,63 @@ def load_generated() -> list[CuratedCategory]:
     return out
 
 
+def _history_raw() -> dict[str, str | None]:
+    """Return ``{category_name: decision_or_None}``; tolerates the legacy list format."""
+    data = _read_json(_HISTORY_FILE, {})
+    if isinstance(data, list):
+        return {str(n).strip(): None for n in data if str(n).strip()}
+    if isinstance(data, dict):
+        return {str(k).strip(): (str(v) if v else None)
+                for k, v in data.items() if str(k).strip()}
+    return {}
+
+
 def load_history() -> set[str]:
-    return {str(n).strip() for n in _read_json(_HISTORY_FILE, []) if str(n).strip()}
+    return set(_history_raw())
 
 
-def mark_analyzed(*category_names: str) -> None:
-    hist = load_history()
-    hist.update(n.strip() for n in category_names if n.strip())
-    _write_json(_HISTORY_FILE, sorted(hist))
+def load_history_map() -> dict[str, str | None]:
+    return _history_raw()
+
+
+def mark_analyzed(*category_names: str, decision: str | None = None) -> None:
+    hist = _history_raw()
+    for n in category_names:
+        n = n.strip()
+        if n:
+            hist[n] = decision or hist.get(n)
+    _write_json(_HISTORY_FILE, hist)
+
+
+def record_decisions(mapping: dict[str, str | None]) -> None:
+    hist = _history_raw()
+    for name, decision in mapping.items():
+        name = str(name).strip()
+        if name:
+            hist[name] = decision or hist.get(name)
+    _write_json(_HISTORY_FILE, hist)
+
+
+def _backup_state() -> None:
+    for src, dst in ((_GEN_FILE, _GEN_BAK), (_HISTORY_FILE, _HISTORY_BAK)):
+        data = _read_json(src, None)
+        if data is not None:
+            _write_json(dst, data)
+
+
+def restore_previous_list() -> bool:
+    """Swap the generated list + history back to the last backup. False if none."""
+    gen_bak = _read_json(_GEN_BAK, None)
+    if gen_bak is None:
+        return False
+    _write_json(_GEN_FILE, gen_bak)
+    hist_bak = _read_json(_HISTORY_BAK, None)
+    _write_json(_HISTORY_FILE, hist_bak if hist_bak is not None else {})
+    return True
+
+
+def has_backup() -> bool:
+    return _read_json(_GEN_BAK, None) is not None
 
 
 def all_categories() -> tuple[CuratedCategory, ...]:
@@ -165,12 +216,13 @@ def random_category() -> CuratedCategory:
     return random.choice(all_categories())
 
 
-def generate_new_categories(n: int = 20) -> list[CuratedCategory]:
-    """Ask Claude for `n` trending dropshipping categories not used before.
+def generate_new_categories(n: int = 20, replace: bool = False) -> list[CuratedCategory]:
+    """Ask the AI for `n` trending dropshipping categories not used before.
 
-    The new categories are appended to ``generated_categories.json`` (deduped)
-    and the full generated list is returned. Returns ``[]`` if the API is
-    unavailable or returns nothing usable.
+    ``replace=True`` (the "AI 새목록" action): back up the current generated
+    list + analysis history, then replace the generated list with the fresh
+    ones and clear the history. ``replace=False``: append to the existing list
+    (deduped). Returns ``[]`` if the API is unavailable or returns nothing.
     """
     exclude = {c.name.lower() for c in all_categories()} | {h.lower() for h in load_history()}
     prompt = (
@@ -200,6 +252,12 @@ def generate_new_categories(n: int = 20) -> list[CuratedCategory]:
             break
     if not fresh:
         return []
+
+    if replace:
+        _backup_state()
+        _write_json(_GEN_FILE, [asdict(c) for c in fresh])
+        _write_json(_HISTORY_FILE, {})       # reset analysis history
+        return fresh
 
     combined = load_generated() + fresh
     deduped: list[CuratedCategory] = []
