@@ -4,4 +4,5 @@ __pycache__/
 output/
 generated_categories.json
 analysis_history.json
+*.bak.json
 icon_preview.png

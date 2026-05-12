@@ -48,83 +48,34 @@ else:
     )
 
 st.session_state.setdefault("category_input", "")
-st.session_state.setdefault("curated_pick_label", "")
 
-PLACEHOLDER = "— 선택하면 입력창에 채워집니다 —"
-ANALYZED_TAG = "✅분석완료"
-
-
-def _disp_label(cat, history: set[str]) -> str:
-    tag = f"  ·  {ANALYZED_TAG}" if cat.name in history else ""
-    return f"{cat.label()}{tag}"
-
-
-# --- Curated category picker (outside the form so its buttons act immediately) ---
-st.markdown("**드랍쇼핑 카테고리** — 마진·수요·경쟁 기준 선별 + AI 트렌딩 추천 (★ 많을수록 유리)")
-
-_hist = categories.load_history()
-
-if st.button("🔄 새 카테고리 20개 생성 (AI 트렌딩)", use_container_width=True):
-    if not llm.any_available():
-        st.warning("LLM API 키가 필요합니다 (GOOGLE_API_KEY 또는 ANTHROPIC_API_KEY). .env 설정 후 재시작", icon="⚠️")
-    else:
-        with st.spinner("AI(Gemini Flash 우선)로 트렌딩 카테고리 생성 중..."):
-            gen = categories.generate_new_categories(20)
-        if gen:
-            st.toast(f"🔄 카테고리 목록 갱신 — 총 AI 추천 {len(gen)}개")
-        else:
-            st.warning("새 카테고리를 받지 못했습니다. 잠시 후 다시 시도하세요.", icon="⚠️")
-
+# Decision map: analysis history (name -> GO/WATCH/NO-GO) plus the live result.
+_dec_map: dict[str, str | None] = dict(categories.load_history_map())
+_live = st.session_state.get("result")
+if _live is not None:
+    _dec_map[_live.verdict.category] = _live.verdict.decision
 _cats = list(categories.all_categories())
-_label_to_name = {_disp_label(c, _hist): c.name for c in _cats}
-_options = [PLACEHOLDER] + list(_label_to_name)
-# Drop a stale selection that disappeared after the list was regenerated.
-if st.session_state["curated_pick_label"] not in _options:
-    st.session_state["curated_pick_label"] = PLACEHOLDER
+_selected = st.session_state["category_input"].strip()
 
+st.subheader("🧭 카테고리 선택")
+catalog.render_stats(_cats, _dec_map, len(categories.load_history()))
+catalog.render_manage_buttons()
+catalog.render_category_grid(_cats, _dec_map, _selected)
 
-def _sync_from_dropdown() -> None:
-    name = _label_to_name.get(st.session_state["curated_pick_label"])
-    if name:
-        st.session_state["category_input"] = name
-
-
-rand_col, pick_col = st.columns([1, 3])
-
-# Render the random button BEFORE the selectbox so we may update the dropdown's
-# state (Streamlit forbids mutating a widget's state after it is instantiated).
-if rand_col.button("🎲 랜덤 추천", use_container_width=True):
-    rc = categories.random_category()
-    st.session_state["category_input"] = rc.name
-    st.session_state["curated_pick_label"] = _disp_label(rc, _hist)
-    st.toast(f"🎲 추천: {rc.name}")
-
-pick_col.selectbox(
-    "카테고리 목록",
-    options=_options,
-    key="curated_pick_label",
-    label_visibility="collapsed",
-    help=f"★ = 마진 / 수요 / 경쟁여유 (3점 만점). '{ANALYZED_TAG}' = 이미 분석한 카테고리. "
-         "선택하면 아래 입력창에 자동 입력됩니다.",
-    on_change=_sync_from_dropdown,
-)
-
-# Show the rationale of whichever known category is currently in the input box.
-_current = categories.by_name(st.session_state["category_input"])
+# Rationale of the currently selected curated category, if any.
+_current = categories.by_name(_selected)
 if _current is not None:
-    tag = f"  ·  {ANALYZED_TAG}" if _current.name in _hist else ""
+    tag = "  ·  ✅ 분석완료" if _current.name in categories.load_history() else ""
     st.caption(f"💡 **{_current.name}**{tag} — {_current.stars()}  \n{_current.reason}")
 
-with st.expander(f"📋 카테고리 {len(_cats)}개 — 선정 기준 / 분석 이력"):
+with st.expander(f"📋 카테고리 {len(_cats)}개 — 선정 기준 / 분석 이력 (표 보기)"):
     st.dataframe(
         [{"카테고리": c.name, "마진": "★" * c.margin, "수요": "★" * c.demand,
           "경쟁여유": "★" * c.competition,
-          "분석": ANALYZED_TAG if c.name in _hist else "—", "선정 이유": c.reason}
+          "분석": _dec_map.get(c.name) or "—", "선정 이유": c.reason}
          for c in _cats],
         use_container_width=True, hide_index=True,
     )
-    if _hist:
-        st.caption(f"분석 완료 {len(_hist)}개: " + ", ".join(sorted(_hist)))
 
 if st.button(f"🚀 전체 {len(_cats)}개 자동 분석", type="primary", use_container_width=True):
     bar = st.progress(0.0, text="준비 중...")
@@ -134,6 +85,7 @@ if st.button(f"🚀 전체 {len(_cats)}개 자동 분석", type="primary", use_c
     bar.empty()
     st.session_state["batch"] = batch
     st.session_state["category_input"] = batch[0][0]   # pre-fill the #1 pick
+    st.rerun()
 
 if st.session_state.get("batch"):
     ui.render_batch(st.session_state["batch"])
@@ -161,7 +113,8 @@ if submitted:
         st.session_state["result"] = run_pipeline(
             category, target_market=market.strip() or "US", currency=currency.strip() or "USD"
         )
-    categories.mark_analyzed(category)
+    categories.mark_analyzed(category, decision=st.session_state["result"].verdict.decision)
+    st.rerun()
 
 result: PipelineResult | None = st.session_state.get("result")
 if result is not None:
