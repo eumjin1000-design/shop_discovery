@@ -1,0 +1,1 @@
+"""Shop Discovery automation modules."""
