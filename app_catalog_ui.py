@@ -83,7 +83,7 @@ def render_manage_buttons() -> None:
     b1, b2, b3 = st.columns(3)
     if b1.button("↩ 이전 목록 복원", use_container_width=True, disabled=not categories.has_backup()):
         if categories.restore_previous_list():
-            st.session_state.pop("batch", None)
+            st.session_state.pop("batch_rows", None)
             st.session_state.pop("result", None)
             st.toast("↩ 이전 카테고리 목록으로 복원했습니다.")
             st.rerun()
@@ -97,7 +97,7 @@ def render_manage_buttons() -> None:
             with st.spinner("AI(Gemini Flash 우선)로 새 트렌딩 카테고리 20개 생성 중..."):
                 gen = categories.generate_new_categories(20, replace=True)
             if gen:
-                st.session_state.pop("batch", None)
+                st.session_state.pop("batch_rows", None)
                 st.session_state.pop("result", None)
                 st.session_state["category_input"] = ""
                 st.toast(f"✨ 새 목록 {len(gen)}개 생성 — 기존 분석 초기화, 백업 저장 완료")

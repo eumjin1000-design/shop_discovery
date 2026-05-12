@@ -101,30 +101,42 @@ def excel_bytes(result: PipelineResult) -> tuple[str, bytes]:
     return Path(path).name, Path(path).read_bytes()
 
 
-def render_batch(batch: list[tuple[str, PipelineResult]]) -> None:
-    """Ranking table + top pick + Excel download for a 20-category batch run."""
-    top_name, top_res = batch[0]
-    tv = top_res.verdict
+def pipeline_rows(results: list[tuple[str, PipelineResult]]) -> list[dict]:
+    """Convert pipeline results to the lightweight, JSON-serialisable row form
+    used by :func:`render_batch` and persisted between runs.
+    """
+    return [
+        {"name": name, "total": round(r.verdict.total_score, 1), "decision": r.verdict.decision,
+         "breakdown": [[ko(l.name), round(l.score, 1), l.max_score] for l in r.verdict.breakdown],
+         "summary": r.verdict.summary}
+        for name, r in results
+    ]
+
+
+def render_batch(rows: list[dict]) -> None:
+    """Ranking table + top pick + Excel download for batch results (row form)."""
+    if not rows:
+        return
+    rows = sorted(rows, key=lambda r: r.get("total", 0), reverse=True)
+    top = rows[0]
     st.success(
-        f"🏆 **1위 추천: {top_name}** — {tv.total_score:.1f}/100 "
-        f"({tv.decision}). 아래 입력창에 채워두었습니다."
+        f"🏆 **1위 추천: {top['name']}** — {top['total']:.1f}/100 "
+        f"({top['decision']}). 아래 입력창에 채워두었습니다.  ·  누적 {len(rows)}개 분석됨"
     )
-    rows = []
-    for rank, (name, res) in enumerate(batch, start=1):
-        v = res.verdict
-        row = {"순위": rank, "카테고리": name, "총점": round(v.total_score, 1),
-               "판정": v.decision}
-        for line in v.breakdown:
-            row[ko(line.name)] = round(line.score, 1)
-        rows.append(row)
-    styled = pd.DataFrame(rows).style.apply(
-        lambda r: [_ROW_BG.get(r["판정"], "")] * len(r), axis=1
+    table = []
+    for rank, r in enumerate(rows, start=1):
+        entry = {"순위": rank, "카테고리": r["name"], "총점": round(r["total"], 1), "판정": r["decision"]}
+        for bn, sc, _mx in r["breakdown"]:
+            entry[bn] = round(sc, 1)
+        table.append(entry)
+    styled = pd.DataFrame(table).style.apply(
+        lambda x: [_ROW_BG.get(x["판정"], "")] * len(x), axis=1
     )
     st.dataframe(styled, use_container_width=True, hide_index=True)
 
-    path = batch_report.write_batch_report(batch)
+    path = batch_report.write_batch_report(rows)
     st.download_button(
-        "⬇️ 전체 결과 Excel 다운로드", data=Path(path).read_bytes(),
+        "⬇️ 순위 결과 Excel 다운로드", data=Path(path).read_bytes(),
         file_name=Path(path).name, key="batch_dl", use_container_width=True,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

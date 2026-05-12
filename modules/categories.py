@@ -22,6 +22,7 @@ _GEN_FILE = os.path.join(_DATA_DIR, "generated_categories.json")
 _HISTORY_FILE = os.path.join(_DATA_DIR, "analysis_history.json")
 _GEN_BAK = os.path.join(_DATA_DIR, "generated_categories.bak.json")
 _HISTORY_BAK = os.path.join(_DATA_DIR, "analysis_history.bak.json")
+_BATCH_FILE = os.path.join(_DATA_DIR, "batch_results.json")
 
 
 @dataclass(frozen=True)
@@ -181,11 +182,31 @@ def restore_previous_list() -> bool:
     _write_json(_GEN_FILE, gen_bak)
     hist_bak = _read_json(_HISTORY_BAK, None)
     _write_json(_HISTORY_FILE, hist_bak if hist_bak is not None else {})
+    clear_batch_results()
     return True
 
 
 def has_backup() -> bool:
     return _read_json(_GEN_BAK, None) is not None
+
+
+# --------------------------------------------------------------------------
+# Batch ranking results — persisted so partial runs survive an app restart
+# --------------------------------------------------------------------------
+def save_batch_results(rows: list[dict]) -> None:
+    _write_json(_BATCH_FILE, list(rows))
+
+
+def load_batch_results() -> list[dict]:
+    data = _read_json(_BATCH_FILE, [])
+    return data if isinstance(data, list) else []
+
+
+def clear_batch_results() -> None:
+    try:
+        os.remove(_BATCH_FILE)
+    except OSError:
+        pass
 
 
 def all_categories() -> tuple[CuratedCategory, ...]:
@@ -257,6 +278,7 @@ def generate_new_categories(n: int = 20, replace: bool = False) -> list[CuratedC
         _backup_state()
         _write_json(_GEN_FILE, [asdict(c) for c in fresh])
         _write_json(_HISTORY_FILE, {})       # reset analysis history
+        clear_batch_results()                # stale ranking refers to old list
         return fresh
 
     combined = load_generated() + fresh

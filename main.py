@@ -66,27 +66,41 @@ def run_pipeline(category: str, *, target_market: str = "US", currency: str = "U
     )
 
 
-def run_all_curated(progress=None, only_unanalyzed: bool = False) -> list[tuple[str, PipelineResult]]:
-    """Run the pipeline for every known category, returned best-score-first.
+def run_categories(category_names, progress=None) -> list[tuple[str, PipelineResult]]:
+    """Run the pipeline for the given category names, returned best-score-first.
 
-    ``progress`` (optional) is called as ``progress(done, total, name)`` after
-    each category so a GUI can render a progress bar. If ``only_unanalyzed`` is
-    set, categories already in the analysis history are skipped.
+    ``progress`` (optional) is called as ``progress(done, total, name, eta_secs)``
+    after each category so a GUI can render a progress bar with an ETA. Each
+    completed batch's verdicts are recorded to the analysis history.
     """
+    import time
+
+    from modules import categories
+
+    names = [n for n in category_names if n]
+    results: list[tuple[str, PipelineResult]] = []
+    t0 = time.time()
+    for i, name in enumerate(names, start=1):
+        results.append((name, run_pipeline(name)))
+        if progress is not None:
+            elapsed = time.time() - t0
+            eta = (len(names) - i) * (elapsed / i)
+            progress(i, len(names), name, eta)
+    categories.record_decisions({name: res.verdict.decision for name, res in results})
+    results.sort(key=lambda pair: pair[1].verdict.total_score, reverse=True)
+    return results
+
+
+def run_all_curated(progress=None, only_unanalyzed: bool = False) -> list[tuple[str, PipelineResult]]:
+    """Run every known category. Thin wrapper over :func:`run_categories`."""
     from modules import categories
 
     cats = list(categories.all_categories())
     if only_unanalyzed:
         done = categories.load_history()
         cats = [c for c in cats if c.name not in done] or cats
-    results: list[tuple[str, PipelineResult]] = []
-    for i, cat in enumerate(cats, start=1):
-        results.append((cat.name, run_pipeline(cat.name)))
-        if progress is not None:
-            progress(i, len(cats), cat.name)
-    categories.record_decisions({name: res.verdict.decision for name, res in results})
-    results.sort(key=lambda pair: pair[1].verdict.total_score, reverse=True)
-    return results
+    wrapped = (lambda d, t, n, e: progress(d, t, n)) if progress else None
+    return run_categories([c.name for c in cats], wrapped)
 
 
 def _print_console(result: PipelineResult) -> None:

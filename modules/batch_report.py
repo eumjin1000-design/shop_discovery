@@ -1,11 +1,11 @@
 """Batch Excel report: one ranking sheet for many analysed categories.
 
-Used by the GUI's "20개 전체 자동 분석" feature.
-
 Interface
 ---------
-    write_batch_report(results, out_dir="output") -> str
-        results: list[tuple[str, PipelineResult]] already sorted best-first.
+    write_batch_report(rows, out_dir="output") -> str
+        rows: list of {"name", "total", "decision",
+                       "breakdown": [[factor, score, max], ...], "summary"}.
+        (Order does not matter — the sheet is written best-first.)
         returns the path to the written .xlsx file
 """
 from __future__ import annotations
@@ -16,7 +16,6 @@ from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
-from .models import PipelineResult
 from .report_gen import _DECISION_FILL, _HEADER_FILL, _HEADER_FONT  # reuse styles
 
 
@@ -27,30 +26,28 @@ def _header(ws, *labels: str) -> None:
         c.font = _HEADER_FONT
 
 
-def write_batch_report(
-    results: list[tuple[str, PipelineResult]], out_dir: str = "output"
-) -> str:
+def write_batch_report(rows: list[dict], out_dir: str = "output") -> str:
     os.makedirs(out_dir, exist_ok=True)
+    rows = sorted(rows, key=lambda r: r.get("total", 0), reverse=True)
     wb = Workbook()
     ws = wb.active
     ws.title = "Ranking"
 
-    factor_names = [l.name for l in results[0][1].verdict.breakdown] if results else []
+    factor_names = [bn for bn, _s, _m in rows[0]["breakdown"]] if rows else []
     _header(ws, "순위", "카테고리", "총점 /100", "판정", *factor_names, "Verdict")
 
-    for rank, (name, res) in enumerate(results, start=1):
-        v = res.verdict
-        row = rank + 1
-        ws.cell(row=row, column=1, value=rank)
-        ws.cell(row=row, column=2, value=name)
-        ws.cell(row=row, column=3, value=round(v.total_score, 1))
-        cell = ws.cell(row=row, column=4, value=v.decision)
+    for rank, r in enumerate(rows, start=1):
+        excel_row = rank + 1
+        ws.cell(row=excel_row, column=1, value=rank)
+        ws.cell(row=excel_row, column=2, value=r["name"])
+        ws.cell(row=excel_row, column=3, value=round(r["total"], 1))
+        cell = ws.cell(row=excel_row, column=4, value=r["decision"])
         cell.font = Font(bold=True)
-        if v.decision in _DECISION_FILL:
-            cell.fill = _DECISION_FILL[v.decision]
-        for j, line in enumerate(v.breakdown):
-            ws.cell(row=row, column=5 + j, value=round(line.score, 1))
-        sc = ws.cell(row=row, column=5 + len(factor_names), value=v.summary)
+        if r["decision"] in _DECISION_FILL:
+            cell.fill = _DECISION_FILL[r["decision"]]
+        for j, (_bn, score, _mx) in enumerate(r["breakdown"]):
+            ws.cell(row=excel_row, column=5 + j, value=round(score, 1))
+        sc = ws.cell(row=excel_row, column=5 + len(factor_names), value=r.get("summary", ""))
         sc.alignment = Alignment(wrap_text=True)
 
     ws.column_dimensions["A"].width = 6
@@ -58,7 +55,7 @@ def write_batch_report(
     ws.column_dimensions["C"].width = 11
     ws.column_dimensions["D"].width = 9
     for i in range(len(factor_names)):
-        ws.column_dimensions[chr(ord("E") + i)].width = 12
+        ws.column_dimensions[chr(ord("E") + i)].width = 13
     ws.column_dimensions[chr(ord("E") + len(factor_names))].width = 80
     ws.freeze_panes = "A2"
 

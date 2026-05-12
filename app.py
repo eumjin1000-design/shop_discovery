@@ -25,9 +25,37 @@ except ImportError:
 
 import app_catalog_ui as catalog
 import app_render as ui
-from main import run_all_curated, run_pipeline
+from main import run_categories, run_pipeline
 from modules import categories, llm, verdict_ai
 from modules.models import PipelineResult
+
+ESTIMATED_SECS_PER_CAT = 4.0  # rough upfront hint; live ETA refines it after #1
+
+
+def _run_batch(names: list[str], label: str) -> None:
+    """Run a slice of categories, merge into the saved ranking, and persist it."""
+    if not names:
+        return
+    st.caption(
+        f"⏳ {label} {len(names)}개 분석 — 예상 ~{int(len(names) * ESTIMATED_SECS_PER_CAT)}초 "
+        "(실제 API 사용 시 더 걸릴 수 있음)"
+    )
+    bar = st.progress(0.0, text=f"0/{len(names)} 분석 준비 중...")
+
+    def _cb(done: int, total: int, name: str, eta: float) -> None:
+        bar.progress(done / total, text=f"{done}/{total} 분석 중... ({name}) — 남은 시간 ~{eta:.0f}초")
+
+    results = run_categories(names, progress=_cb)
+    bar.empty()
+    merged: dict[str, dict] = {r["name"]: r for r in st.session_state.get("batch_rows", [])}
+    for r in ui.pipeline_rows(results):
+        merged[r["name"]] = r
+    rows = sorted(merged.values(), key=lambda r: r["total"], reverse=True)
+    st.session_state["batch_rows"] = rows
+    categories.save_batch_results(rows)            # 중간 저장 — survives restart
+    st.session_state["category_input"] = rows[0]["name"]
+    st.toast(f"✅ {label} 분석 완료 — 누적 {len(rows)}개, 1위 {rows[0]['name']}")
+    st.rerun()
 
 # --------------------------------------------------------------------------
 st.set_page_config(page_title="Shop Discovery", page_icon="🐙", layout="centered")
@@ -49,11 +77,19 @@ else:
 
 st.session_state.setdefault("category_input", "")
 
-# Decision map: analysis history (name -> GO/WATCH/NO-GO) plus the live result.
+# Restore the last batch ranking from disk (survives an app restart).
+if "batch_rows" not in st.session_state:
+    _saved = categories.load_batch_results()
+    if _saved:
+        st.session_state["batch_rows"] = _saved
+
+# Decision map: analysis history (name -> GO/WATCH/NO-GO) + live result + batch.
 _dec_map: dict[str, str | None] = dict(categories.load_history_map())
 _live = st.session_state.get("result")
 if _live is not None:
     _dec_map[_live.verdict.category] = _live.verdict.decision
+for _r in st.session_state.get("batch_rows", []):
+    _dec_map.setdefault(_r["name"], _r.get("decision"))
 _cats = list(categories.all_categories())
 _selected = st.session_state["category_input"].strip()
 
@@ -77,18 +113,18 @@ with st.expander(f"📋 카테고리 {len(_cats)}개 — 선정 기준 / 분석 
         use_container_width=True, hide_index=True,
     )
 
-if st.button(f"🚀 전체 {len(_cats)}개 자동 분석", type="primary", use_container_width=True):
-    bar = st.progress(0.0, text="준비 중...")
-    batch = run_all_curated(
-        progress=lambda done, total, name: bar.progress(done / total, text=f"{done}/{total}  ·  {name}")
-    )
-    bar.empty()
-    st.session_state["batch"] = batch
-    st.session_state["category_input"] = batch[0][0]   # pre-fill the #1 pick
-    st.rerun()
+_n = len(_cats)
+_chunks = [(i, min(i + 10, _n)) for i in range(0, _n, 10)]   # [(0,10),(10,20),...]
+st.markdown("**자동 분석** — 10개 단위 부분 배치 또는 전체. 완료 즉시 아래 순위 테이블이 갱신됩니다.")
+_btn_cols = st.columns(len(_chunks) + 1)
+for _ci, (_a, _b) in enumerate(_chunks):
+    if _btn_cols[_ci].button(f"{_a + 1}~{_b}번 분석", use_container_width=True, key=f"batch_{_a}"):
+        _run_batch([c.name for c in _cats[_a:_b]], f"{_a + 1}~{_b}번")
+if _btn_cols[-1].button(f"🚀 전체 분석 ({_n}개)", type="primary", use_container_width=True, key="batch_all"):
+    _run_batch([c.name for c in _cats], "전체")
 
-if st.session_state.get("batch"):
-    ui.render_batch(st.session_state["batch"])
+if st.session_state.get("batch_rows"):
+    ui.render_batch(st.session_state["batch_rows"])
 
 st.divider()
 
