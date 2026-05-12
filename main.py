@@ -66,6 +66,24 @@ def run_pipeline(category: str, *, target_market: str = "US", currency: str = "U
     )
 
 
+def run_all_curated(progress=None) -> list[tuple[str, PipelineResult]]:
+    """Run the pipeline for every curated category, returned best-score-first.
+
+    ``progress`` (optional) is called as ``progress(done, total, name)`` after
+    each category so a GUI can render a progress bar.
+    """
+    from modules import categories
+
+    cats = categories.CURATED
+    results: list[tuple[str, PipelineResult]] = []
+    for i, cat in enumerate(cats, start=1):
+        results.append((cat.name, run_pipeline(cat.name)))
+        if progress is not None:
+            progress(i, len(cats), cat.name)
+    results.sort(key=lambda pair: pair[1].verdict.total_score, reverse=True)
+    return results
+
+
 def _print_console(result: PipelineResult) -> None:
     v = result.verdict
     print()
