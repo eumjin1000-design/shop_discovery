@@ -23,7 +23,7 @@ except ImportError:
     pass
 
 from main import run_pipeline
-from modules import report_gen
+from modules import categories, report_gen
 from modules.llm import is_available
 from modules.models import PipelineResult
 
@@ -100,19 +100,69 @@ if not is_available():
         icon="ℹ️",
     )
 
+st.session_state.setdefault("category_input", "")
+
+PLACEHOLDER = "— 선택하면 입력창에 채워집니다 —"
+_LABELS = [PLACEHOLDER] + [c.label() for c in categories.CURATED]
+st.session_state.setdefault("curated_pick_label", PLACEHOLDER)
+
+
+def _sync_from_dropdown() -> None:
+    label = st.session_state["curated_pick_label"]
+    cat = next((c for c in categories.CURATED if c.label() == label), None)
+    if cat is not None:
+        st.session_state["category_input"] = cat.name
+
+
+# --- Curated category picker (outside the form so its buttons act immediately) ---
+st.markdown("**인기 드랍쇼핑 카테고리** — 마진·수요·경쟁 기준으로 선별 (★ 많을수록 유리)")
+rand_col, pick_col = st.columns([1, 3])
+
+# Render the random button BEFORE the selectbox so we may update the dropdown's
+# state (Streamlit forbids mutating a widget's state after it is instantiated).
+if rand_col.button("🎲 랜덤 추천", use_container_width=True):
+    rc = categories.random_category()
+    st.session_state["category_input"] = rc.name
+    st.session_state["curated_pick_label"] = rc.label()
+    st.toast(f"🎲 추천: {rc.name}")
+
+pick_col.selectbox(
+    "카테고리 목록",
+    options=_LABELS,
+    key="curated_pick_label",
+    label_visibility="collapsed",
+    help="각 항목의 ★ = 마진 / 수요 / 경쟁여유 (3점 만점). 선택하면 아래 입력창에 자동 입력됩니다.",
+    on_change=_sync_from_dropdown,
+)
+
+# Show the rationale of whichever curated category is currently in the input box.
+_current = categories.by_name(st.session_state["category_input"])
+if _current is not None:
+    st.caption(f"💡 **{_current.name}** — {_current.stars()}  \n{_current.reason}")
+
+with st.expander("📋 20개 카테고리 선정 기준 한눈에 보기"):
+    st.dataframe(
+        [{"카테고리": c.name, "마진": "★" * c.margin, "수요": "★" * c.demand,
+          "경쟁여유": "★" * c.competition, "선정 이유": c.reason}
+         for c in categories.CURATED],
+        use_container_width=True, hide_index=True,
+    )
+
 with st.form("discovery"):
-    category = st.text_input("분석할 카테고리", placeholder="예: wireless earbuds, cat water fountain")
+    st.text_input("분석할 카테고리", key="category_input",
+                  placeholder="직접 입력하거나 위에서 선택 / 랜덤 추천 (예: wireless earbuds)")
     col_a, col_b = st.columns(2)
     market = col_a.text_input("타겟 시장", value="US")
     currency = col_b.text_input("통화", value="USD")
     submitted = st.form_submit_button("🔍 분석 실행", use_container_width=True)
 
 if submitted:
-    if not category.strip():
+    category = st.session_state["category_input"].strip()
+    if not category:
         st.warning("카테고리를 입력하세요.")
         st.stop()
     with st.spinner(f'"{category}" 분석 중...'):
-        result = run_pipeline(category.strip(), target_market=market.strip() or "US",
+        result = run_pipeline(category, target_market=market.strip() or "US",
                               currency=currency.strip() or "USD")
     st.session_state["result"] = result
 
