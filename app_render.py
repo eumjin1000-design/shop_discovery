@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from modules import batch_report, report_gen
+from modules import batch_report, report_gen, shop_namer, sourcing, sourcing_report
 from modules.models import PipelineResult
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
@@ -146,3 +146,65 @@ def render_strategy(result: PipelineResult) -> None:
                    f"{len(result.review.top_complaints)}개 → 콘텐츠 소재 다양성 기준")
     c4.metric("영상 홍보 잠재력", "🔜 향후 적용",
               help="시각적 매력도 평가 — 추후 이미지/영상 분석 모듈 연동 예정")
+
+
+def _shop_name_block(category: str) -> None:
+    st.markdown("**🏷️ 샵 이름 자동 생성** — 영어 · 기억하기 쉬움 · .com 가능성 고려")
+    if st.button("🏷️ 샵 이름 5개 생성", key="gen_shop_names"):
+        with st.spinner("샵 이름 생성 중..."):
+            st.session_state["shop_names"] = shop_namer.generate_shop_names(category, 5)
+        st.session_state["shop_names_cat"] = category
+    names = (st.session_state.get("shop_names")
+             if st.session_state.get("shop_names_cat") == category else None)
+    if not names:
+        return
+    by = {sn.name: sn for sn in names}
+    chosen = st.radio(
+        "마음에 드는 이름 선택", [sn.name for sn in names], key="shop_name_radio",
+        format_func=lambda n: f"{n}  —  {by[n].concept}  ·  🌐 {by[n].domain}",
+    )
+    st.session_state["shop_name_selected"] = chosen
+    st.success(f"선택: **{chosen}**  ·  도메인 후보: `{by[chosen].domain}`")
+
+
+def _sourcing_block(category: str) -> None:
+    st.markdown(
+        f"**📦 소싱 리스트 자동 생성** — {sourcing.TOTAL}개 "
+        f"({sourcing.SUBCATS_N} 서브카테고리 × {sourcing.PRODUCTS_N} 상품 × {sourcing.VARIANTS_N} 변형)"
+    )
+    if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
+        with st.spinner(f"{sourcing.TOTAL}개 상품 소싱 리스트 생성 중..."):
+            items = sourcing.build_sourcing_list(category)
+            path = sourcing_report.write_sourcing_report(
+                category, items, shop_name=st.session_state.get("shop_name_selected"),
+            )
+        st.session_state["sourcing_items"] = items
+        st.session_state["sourcing_path"] = path
+        st.session_state["sourcing_cat"] = category
+    items = (st.session_state.get("sourcing_items")
+             if st.session_state.get("sourcing_cat") == category else None)
+    if not items:
+        return
+    st.write(f"총 **{len(items)}개** 상품 — 미리보기 (상위 20개)")
+    st.dataframe(
+        [{"#": i + 1, "서브카테고리": it.subcategory, "상품명": it.product_name,
+          "Amazon 검색 URL": it.amazon_url, "예상가격($)": it.est_price, "키워드": it.keyword}
+         for i, it in enumerate(items[:20])],
+        use_container_width=True, hide_index=True,
+    )
+    path = st.session_state["sourcing_path"]
+    st.download_button(
+        "⬇️ 소싱 리스트 Excel 다운로드", data=Path(path).read_bytes(),
+        file_name=Path(path).name, key="sourcing_dl", use_container_width=True,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    st.caption(f"리포트는 `output/{Path(path).name}` 에도 저장되었습니다. (Amazon URL 은 셀 하이퍼링크)")
+
+
+def render_go_tools(result: PipelineResult) -> None:
+    """샵 이름 / 소싱 리스트 자동 생성 — GO 판정 카테고리에서만 노출."""
+    st.subheader("🚀 다음 단계 (GO 전용)")
+    category = result.request.category
+    _shop_name_block(category)
+    st.divider()
+    _sourcing_block(category)

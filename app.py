@@ -206,3 +206,9 @@ if result is not None:
 
     st.divider()
     ui.render_strategy(result)
+
+    st.divider()
+    if v.decision == "GO":
+        ui.render_go_tools(result)
+    else:
+        st.caption("ℹ️ 샵 이름·소싱 리스트 자동 생성은 GO 판정 카테고리에서 사용할 수 있습니다.")
