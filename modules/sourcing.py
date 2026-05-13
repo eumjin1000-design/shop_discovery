@@ -79,19 +79,18 @@ GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
                  "pro", "mini", "portable", "premium", "compact", "plus", "product"}
 
 
-def _guess_node(category: str, subcategory: str = "") -> str:
-    """Best-effort Amazon browse-node id from category/subcategory text.
+def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
+    """NODE_DB entries matching ``text``, best first as (node_id, key, score).
 
-    Word-level matching against :data:`NODE_DB` keys: each key word scores 2 for
-    a whole-word match, 1 for a substring-only match — halved (1 / 0.5) when the
-    word is in :data:`GENERIC_WORDS`. The highest total wins; ties go to the
-    more specific (longer-key) entry. Returns :data:`_NODE_NONE` ("1000") when
-    nothing matches.
+    Word-level scoring: a key word scores 2 for a whole-word match, 1 for a
+    substring-only match — halved (1 / 0.5) when the word is in
+    :data:`GENERIC_WORDS`. Ties broken by key specificity (more words). Empty
+    list when nothing matches.
     """
-    words = set(_WORD_RE.findall(f"{category} {subcategory}".lower()))
+    words = set(_WORD_RE.findall(text.lower()))
     if not words:
-        return _NODE_NONE
-    best_node, best_score, best_keylen = _NODE_NONE, 0.0, 0
+        return []
+    scored: list[tuple[str, str, float, int]] = []
     for key, node in NODE_DB.items():
         key_words = key.split()
         score = 0.0
@@ -103,11 +102,33 @@ def _guess_node(category: str, subcategory: str = "") -> str:
             else:
                 continue
             score += hit * 0.5 if w in GENERIC_WORDS else hit
-        if score == 0:
+        if score > 0:
+            scored.append((node, key, score, len(key_words)))
+    scored.sort(key=lambda t: (t[2], t[3]), reverse=True)
+    return [(node, key, score) for node, key, score, _ in scored]
+
+
+def _guess_node(category: str, subcategory: str = "") -> str:
+    """Best-effort Amazon browse-node id; :data:`_NODE_NONE` ("1000") if none."""
+    ranked = _ranked_nodes(f"{category} {subcategory}")
+    return ranked[0][0] if ranked else _NODE_NONE
+
+
+def _get_node_candidates(category: str) -> str:
+    """Top-5 distinct NODE_DB matches for ``category`` as a one-line string:
+    ``"2619533011(pet supplies), 3774861(vitamins supplements), ..."`` —
+    empty string when nothing matches.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for node, key, _ in _ranked_nodes(category):
+        if node in seen:
             continue
-        if score > best_score or (score == best_score and len(key_words) > best_keylen):
-            best_node, best_score, best_keylen = node, score, len(key_words)
-    return best_node
+        seen.add(node)
+        out.append(f"{node}({key})")
+        if len(out) >= 5:
+            break
+    return ", ".join(out)
 
 
 @dataclass(frozen=True)
@@ -193,18 +214,27 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
                           n_variants=n_variants, total=total, summary=summary)
 
 
+# LLM prompt template (filled by _from_llm with {category}, {n_subs},
+# {products_n}, {candidates}). Literal JSON braces are doubled for str.format.
+USER_PROMPT = (
+    'For a dropshipping store in the "{category}" niche, propose {n_subs} '
+    "subcategories. For each subcategory give:\n"
+    "  amazon_node_id : 아래 후보 중 가장 적합한 노드 ID를 선택하세요. 확신이 없으면 빈 문자열.\n"
+    "                   후보: {candidates}\n"
+    'and list {products_n} specific product ideas; for each product give a '
+    'likely incumbent "brand", a high-search-volume low-competition "keyword", '
+    'a rough USD retail price "est_price", and if known an "asin" and '
+    '"review_count" (else "" and 0). Return ONLY a JSON array: '
+    '[{{"subcategory": "...", "amazon_node_id": "...", "products": [{{"name": '
+    '"...", "brand": "...", "keyword": "...", "est_price": <num>, "asin": '
+    '"...", "review_count": <int>}}, ...]}}, ...]. No prose.'
+)
+
+
 def _from_llm(category: str, n_subs: int) -> list[dict] | None:
-    prompt = (
-        f'For a dropshipping store in the "{category}" niche, propose {n_subs} '
-        "subcategories. For each subcategory give its Amazon US browse-node id "
-        '("amazon_node_id" — numeric string if you know it, else "") and list '
-        f'{PRODUCTS_N} specific product ideas; for each product give a likely '
-        'incumbent "brand", a high-search-volume low-competition "keyword", a '
-        'rough USD retail price "est_price", and if known an "asin" and '
-        '"review_count" (else "" and 0). Return ONLY a JSON array: '
-        '[{"subcategory": "...", "amazon_node_id": "...", "products": [{"name": '
-        '"...", "brand": "...", "keyword": "...", "est_price": <num>, "asin": '
-        '"...", "review_count": <int>}, ...]}, ...]. No prose.'
+    prompt = USER_PROMPT.format(
+        category=category, n_subs=n_subs, products_n=PRODUCTS_N,
+        candidates=_get_node_candidates(category) or "(없음 — 빈 문자열로 두세요)",
     )
     data = ask_json(prompt, max_tokens=3500)
     if not isinstance(data, list):
