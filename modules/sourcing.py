@@ -169,6 +169,7 @@ class SourcingResult:
     n_variants: int
     total: int
     summary: str
+    spark_rows: tuple[dict, ...] = ()   # filled by modules.spark_import.merge_with_sourcing
 
 
 def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
