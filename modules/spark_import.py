@@ -108,7 +108,7 @@ def calc_shopify_price(amazon_price: float, margin_rate: float = 0.70,
     shopify_msrp = round(shopify_sell / (1 - discount_rate), 2)
     margin_usd = round(shopify_sell - amazon_price, 2)
     return {"shopify_sell": shopify_sell, "shopify_msrp": shopify_msrp,
-            "margin_usd": margin_usd}
+            "margin_usd": margin_usd, "margin_rate": margin_rate}
 
 
 def merge_with_sourcing(sourcing_result: SourcingResult, spark_rows: list[dict],
