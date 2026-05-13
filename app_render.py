@@ -234,28 +234,31 @@ def _shop_name_block(category: str) -> None:
 
 
 def _sourcing_block(category: str) -> None:
-    st.markdown(
-        f"**📦 소싱 리스트 자동 생성** — {sourcing.TOTAL}개 "
-        f"({sourcing.SUBCATS_N} 서브카테고리 × {sourcing.PRODUCTS_N} 상품 × {sourcing.VARIANTS_N} 변형)"
-    )
+    st.markdown("**📦 소싱 리스트 자동 생성** — 서브카테고리 × 상품 × 변형 (Amazon 노드·Prime·리뷰순 URL, Spark 수집용)")
+    c_sub, c_var = st.columns(2)
+    n_subs = c_sub.slider("서브카테고리 수", 2, 10, sourcing.DEFAULT_SUBS, key="src_subs")
+    n_vars = c_var.slider("변형 수", 2, 10, sourcing.DEFAULT_VARIANTS, key="src_vars")
+    st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
     if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
-        with st.spinner(f"{sourcing.TOTAL}개 상품 소싱 리스트 생성 중..."):
-            items = sourcing.build_sourcing_list(category)
+        with st.spinner("소싱 리스트 생성 중..."):
+            res = sourcing.generate_sourcing_list(category, n_subs=n_subs, n_variants=n_vars)
             path = sourcing_report.write_sourcing_report(
-                category, items, shop_name=st.session_state.get("shop_name_selected"),
+                res, shop_name=st.session_state.get("shop_name_selected"),
             )
-        st.session_state["sourcing_items"] = items
+        st.session_state["sourcing_res"] = res
         st.session_state["sourcing_path"] = path
         st.session_state["sourcing_cat"] = category
-    items = (st.session_state.get("sourcing_items")
-             if st.session_state.get("sourcing_cat") == category else None)
-    if not items:
+    res = (st.session_state.get("sourcing_res")
+           if st.session_state.get("sourcing_cat") == category else None)
+    if not res:
         return
-    st.write(f"총 **{len(items)}개** 상품 — 미리보기 (상위 20개)")
+    st.write(f"{res.summary}  ·  미리보기 (상위 20개)")
     st.dataframe(
-        [{"#": i + 1, "서브카테고리": it.subcategory, "상품명": it.product_name,
-          "Amazon 검색 URL": it.amazon_url, "예상가격($)": it.est_price, "키워드": it.keyword}
-         for i, it in enumerate(items[:20])],
+        [{"#": i + 1, "서브카테고리": r.subcategory, "브랜드(추정)": r.brand or "—",
+          "상품명": r.product_name, "Amazon URL": r.amazon_url,
+          "예상가격($)": r.est_price, "키워드": r.keyword, "ASIN": r.asin or "—",
+          "리뷰수": r.review_count or "—"}
+         for i, r in enumerate(res.rows[:20])],
         use_container_width=True, hide_index=True,
     )
     path = st.session_state["sourcing_path"]
@@ -264,7 +267,7 @@ def _sourcing_block(category: str) -> None:
         file_name=Path(path).name, key="sourcing_dl", use_container_width=True,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    st.caption(f"리포트는 `output/{Path(path).name}` 에도 저장되었습니다. (Amazon URL 은 셀 하이퍼링크)")
+    st.caption(f"리포트는 `output/{Path(path).name}` 에도 저장되었습니다. (Amazon URL = 셀 하이퍼링크)")
 
 
 def render_go_tools(result: PipelineResult) -> None:
