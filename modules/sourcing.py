@@ -17,6 +17,7 @@ Interface
 """
 from __future__ import annotations
 
+import re
 import urllib.parse
 from dataclasses import dataclass
 
@@ -29,6 +30,84 @@ DEFAULT_VARIANTS = 5
 _VARIANT_POOL = ["Standard", "Compact", "Premium", "Set of 2", "Travel Size",
                  "Mini", "XL", "Refill Pack", "Gift Box", "Pro"]
 _PRIME_NODE_US = "23533298011"  # p_n_prime_eligibility filter id on amazon.com
+_NODE_NONE = "1000"             # sentinel: no specific browse node guessed
+
+# amazon.com browse-node ids keyed by short phrases — used by _guess_node() to
+# pick a node from category/subcategory text when the LLM did not supply one.
+NODE_DB: dict[str, str] = {
+    # Pet Supplies
+    "pet supplies": "2619533011", "dog supplies": "2619533011", "cat supplies": "2619533011",
+    "fish aquarium": "2619534011", "bird supplies": "3606785011", "small animal": "3606786011",
+    # Health & Beauty
+    "vitamins supplements": "3774861", "health household": "3760901", "sports nutrition": "6973663011",
+    "personal care": "11060451", "skin care": "11060451", "hair care": "11057771", "oral care": "3760931",
+    # Kitchen
+    "kitchen dining": "284507", "cookware": "289914", "bakeware": "289739", "kitchen tools": "289973",
+    "small appliances": "298092", "coffee": "678508011",
+    # Home
+    "home kitchen": "1055398", "bedding": "3732961", "bath": "3610841", "furniture": "1063306",
+    "storage organization": "3737461", "cleaning supplies": "3760901", "lighting": "495224", "led strip": "495224",
+    # Fitness & Sports
+    "sports outdoors": "3375251", "exercise fitness": "3407731", "yoga": "3407731",
+    "camping hiking": "3375381", "cycling": "3403875", "running": "3375271",
+    # Electronics
+    "electronics": "172659", "headphones": "745384", "bluetooth speaker": "172659",
+    "phone accessories": "2335752011", "laptop accessories": "541966", "smart home": "6563140011",
+    "security camera": "172659", "power bank": "172659",
+    # Baby
+    "baby": "165797011", "baby care": "165797011", "diapering": "165796011",
+    "feeding": "166585011", "baby toys": "165793011",
+    # Clothing & Fashion
+    "clothing": "7141123011", "mens clothing": "1036592", "womens clothing": "1045024",
+    "shoes": "672123011", "accessories": "7141123011",
+    # Office
+    "office products": "1069242", "office supplies": "1069242", "desk accessories": "1069242",
+    # Automotive
+    "automotive": "15684181", "car accessories": "15684181", "car electronics": "15684181",
+    # Outdoor & Garden
+    "garden outdoor": "2972638011", "patio furniture": "3732961", "lawn care": "3238155011", "plants": "3238155011",
+    # Toys & Games
+    "toys games": "165793011", "board games": "166925011", "puzzles": "166943011", "outdoor play": "165793011",
+    # Arts & Crafts
+    "arts crafts": "2617942011", "painting": "2617942011", "sewing": "2617942011",
+    # Food & Grocery
+    "grocery food": "16310101", "snacks": "16310101", "beverages": "16310101", "organic food": "16310101",
+}
+_WORD_RE = re.compile(r"[a-z0-9]+")
+# Words too generic to be a reliable category signal — their match is halved.
+GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
+                 "pro", "mini", "portable", "premium", "compact", "plus", "product"}
+
+
+def _guess_node(category: str, subcategory: str = "") -> str:
+    """Best-effort Amazon browse-node id from category/subcategory text.
+
+    Word-level matching against :data:`NODE_DB` keys: each key word scores 2 for
+    a whole-word match, 1 for a substring-only match — halved (1 / 0.5) when the
+    word is in :data:`GENERIC_WORDS`. The highest total wins; ties go to the
+    more specific (longer-key) entry. Returns :data:`_NODE_NONE` ("1000") when
+    nothing matches.
+    """
+    words = set(_WORD_RE.findall(f"{category} {subcategory}".lower()))
+    if not words:
+        return _NODE_NONE
+    best_node, best_score, best_keylen = _NODE_NONE, 0.0, 0
+    for key, node in NODE_DB.items():
+        key_words = key.split()
+        score = 0.0
+        for w in key_words:
+            if w in words:
+                hit = 2.0
+            elif any(w in tw for tw in words):
+                hit = 1.0
+            else:
+                continue
+            score += hit * 0.5 if w in GENERIC_WORDS else hit
+        if score == 0:
+            continue
+        if score > best_score or (score == best_score and len(key_words) > best_keylen):
+            best_node, best_score, best_keylen = node, score, len(key_words)
+    return best_node
 
 
 @dataclass(frozen=True)
@@ -53,7 +132,7 @@ class SourcingRow:
 
         Falls back to a keyword search when no browse-node id is available.
         """
-        if self.amazon_node_id:
+        if self.amazon_node_id and self.amazon_node_id != _NODE_NONE:
             rh = (f"n%3A{urllib.parse.quote(str(self.amazon_node_id))}"
                   f"%2Cp_n_prime_eligibility%3A{_PRIME_NODE_US}")
             return f"https://www.amazon.com/s?rh={rh}&s=review-count-rank"
@@ -81,7 +160,8 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
 
     rows: list[SourcingRow] = []
     for sub in spec:
-        node_id = str(sub.get("amazon_node_id") or "").strip()
+        node_id = (str(sub.get("amazon_node_id") or "").strip()
+                   or _guess_node(category, sub["subcategory"]))
         for prod in sub["products"]:
             base = prod.get("est_price")
             keyword = (str(prod.get("keyword") or "").strip()
