@@ -11,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+import app_spark_ui as spark_ui
 from modules import batch_report, report_gen, shop_namer, sourcing, sourcing_report
 from modules.models import PipelineResult
 
@@ -288,3 +289,5 @@ def render_go_tools(result: PipelineResult) -> None:
     _shop_name_block(category)
     st.divider()
     _sourcing_block(category)
+    st.divider()
+    spark_ui.render_spark_import_section(category)
