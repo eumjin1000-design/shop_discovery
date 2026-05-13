@@ -237,7 +237,7 @@ def _sourcing_block(category: str) -> None:
     st.markdown("**📦 소싱 리스트 자동 생성** — 서브카테고리 × 상품 × 변형 (Amazon 노드·Prime·리뷰순 URL, Spark 수집용)")
     c_sub, c_var = st.columns(2)
     n_subs = c_sub.slider("서브카테고리 수", 2, 10, sourcing.DEFAULT_SUBS, key="src_subs")
-    n_vars = c_var.slider("변형 수", 2, 10, sourcing.DEFAULT_VARIANTS, key="src_vars")
+    n_vars = c_var.slider("변형 수", 1, 10, sourcing.DEFAULT_VARIANTS, key="src_vars")
     st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
     if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
         with st.spinner("소싱 리스트 생성 중..."):
@@ -262,12 +262,23 @@ def _sourcing_block(category: str) -> None:
         use_container_width=True, hide_index=True,
     )
     path = st.session_state["sourcing_path"]
-    st.download_button(
-        "⬇️ 소싱 리스트 Excel 다운로드", data=Path(path).read_bytes(),
+    txt_path = Path(path).with_suffix(".txt")
+    d_xlsx, d_txt = st.columns(2)
+    d_xlsx.download_button(
+        "⬇️ Excel 다운로드", data=Path(path).read_bytes(),
         file_name=Path(path).name, key="sourcing_dl", use_container_width=True,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    st.caption(f"리포트는 `output/{Path(path).name}` 에도 저장되었습니다. (Amazon URL = 셀 하이퍼링크)")
+    if txt_path.exists():
+        d_txt.download_button(
+            "⬇️ Spark 일괄입력 .txt", data=txt_path.read_bytes(),
+            file_name=txt_path.name, key="sourcing_txt_dl", use_container_width=True,
+            mime="text/plain",
+        )
+    st.caption(
+        f"`output/{Path(path).name}` (Amazon URL = 셀 하이퍼링크) + `{txt_path.name}` "
+        "(`카테고리|서브카테고리|URL` — Spark 일괄입력 탭에 붙여넣고 작업 시작)"
+    )
 
 
 def render_go_tools(result: PipelineResult) -> None:

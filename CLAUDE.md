@@ -41,6 +41,8 @@ KW_EVERYWHERE_API_KEY=...        # Keywords Everywhere — 실 검색량/추세
 main.py                    파이프라인 오케스트레이션(run_pipeline / run_categories / run_all_curated) + CLI + 콘솔 출력
 app.py                     Streamlit 페이지 스크립트(레이아웃 흐름 + 단일 분석 폼 + 배치 버튼 + 결과 렌더 호출)
 app_render.py              결과 영역 렌더 헬퍼(헤더, 게이지, 판정 패널, 스코어바, 배치 테이블, 전략 패널, GO 도구, Excel)
+                           └ 소싱 블록: 슬라이더 2개(서브카테고리 수 2~10, 변형 수 1~10), 세션키 sourcing_res,
+                             generate_sourcing_list(category, n_subs, n_variants) 호출, Excel + Spark .txt 다운로드 버튼
 app_catalog_ui.py          카테고리 영역 렌더 헬퍼(통계 카드, 목록 헤더+관리 버튼+amber 배너, 카드 그리드, 이모지 매핑)
 make_icon.py               Pillow로 데스크톱 아이콘(icon.ico) 생성 — 일회성 유틸
 modules/
@@ -62,8 +64,13 @@ modules/
   report_gen.py            단일 분석 Excel(Summary·Scorecard·Keywords·Details 시트)
   batch_report.py          배치 순위 Excel(Ranking 시트 1장) — 행-딕트 리스트 입력
   shop_namer.py            GO 카테고리용 샵 이름 5개(영어·기억 쉬움·.com 가능) — tier="quality"
-  sourcing.py              GO 카테고리용 소싱 리스트 150개(6 서브 × 5 상품 × 5 변형) — tier="fast"
-  sourcing_report.py       소싱 리스트 Excel(상품명·Amazon 검색 URL·예상가·키워드)
+  sourcing.py              소싱 리스트 생성. generate_sourcing_list(category, n_subs=6, n_variants=5).
+                           SourcingRow(subcategory, base_product, variant, brand, keyword, est_price,
+                           amazon_node_id, asin, review_count). 변형 풀 10종. 총 행 = n_subs×5×n_variants.
+                           Amazon URL = 노드 검색(rh=n%3A{node_id}+Prime+리뷰순), 노드 없으면 키워드 폴백. — tier="fast"
+  sourcing_report.py       write_sourcing_report(result, shop_name, out_dir). Excel 11열:
+                           #·서브카테고리·브랜드·상품명·변형·AmazonURL·예상가격·키워드·ASIN·리뷰수·노드ID.
+                           Spark 일괄입력 .txt 파일 동시 생성 (카테고리|서브카테고리|URL 형식, .xlsx와 같은 stem).
 ```
 
 영속 파일(프로젝트 루트, 모두 `.gitignore`):
@@ -139,7 +146,8 @@ DiscoveryRequest
    - `📌 내 전략 기준` 4개 메트릭(`ui.render_strategy`): **SEO 적합도**(키워드 합산 검색량 ≥8000 & 경쟁 <12000 → ✅) / **대량 업로드 적합**(경쟁 리스팅 ≥1500 → ✅) / **블로그 콘텐츠 난이도**(문제인지도+불만 테마 수로 쉬움/보통/어려움) / **영상 홍보 잠재력**(🔜 향후 적용).
    - `v.decision == "GO"`면 `ui.render_go_tools(result)`:
      - `🏷️ 샵 이름 5개 생성`(`shop_namer`, tier="quality") → `st.radio`로 선택(각 항목 컨셉 + 🌐 도메인 후보), 선택값은 소싱 Excel 헤더에 반영.
-     - `📦 소싱 리스트 생성`(`sourcing.build_sourcing_list`) → 150개 + 상위 20개 미리보기 + `⬇️ 소싱 리스트 Excel 다운로드`.
+     - `📦 소싱 리스트 생성`(`sourcing.generate_sourcing_list(category, n_subs, n_variants)`, tier="fast") — 슬라이더로 서브카테고리 수(2~10)·변형 수(1~10) 조절, 총 행 = n_subs×5(상품)×n_variants(기본 6×5×5=150). 변형은 10종 풀(`Standard/Compact/Premium/Set of 2/Travel Size/Mini/XL/Refill Pack/Gift Box/Pro`)에서 앞 n_variants개. 각 행: 서브카테고리·기본상품·변형·brand(추정)·keyword(고검색량·저경쟁)·est_price(시드 RNG)·amazon_node_id·asin/review_count(스크래퍼 채울 플레이스홀더). **Amazon URL** = 브라우즈 노드 검색(`s?rh=n%3A{node_id}%2Cp_n_prime_eligibility%3A23533298011&s=review-count-rank` = 노드+Prime+리뷰순), 노드 ID 없으면 키워드 검색(`s?k=...&s=review-count-rank`) 폴백. → 상위 20개 미리보기 + `⬇️ Excel 다운로드` + `⬇️ Spark 일괄입력 .txt`.
+       **Spark 연동**: `sourcing_report.py`가 `.xlsx`와 같은 stem의 `.txt`를 동시 생성(`카테고리|서브카테고리|URL` 한 줄씩, 중복 제거) → 그 `.txt`를 Spark 일괄입력 탭에 붙여넣기 → 작업 시작.
    - GO 아니면 "GO 판정 시 사용 가능" 안내.
 
 ---

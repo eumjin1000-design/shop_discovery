@@ -1,14 +1,19 @@
 """Excel writer for the sourcing list (see modules.sourcing).
 
+Also drops a Spark bulk-input ``.txt`` next to the ``.xlsx`` — one line per
+unique ``카테고리|서브카테고리|URL`` — to paste into a scraper's bulk tab.
+
 Interface
 ---------
     write_sourcing_report(result: SourcingResult, shop_name=None, out_dir="output") -> str
+        returns the .xlsx path; the .txt sidecar shares the same stem.
 """
 from __future__ import annotations
 
 import os
 import re
 from datetime import datetime
+from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
@@ -68,4 +73,14 @@ def write_sourcing_report(result: SourcingResult, shop_name: str | None = None,
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(out_dir, f"sourcing_{slug}_{stamp}.xlsx")
     wb.save(path)
+
+    # Spark bulk-input sidecar: unique "카테고리|서브카테고리|URL" lines.
+    seen: set[str] = set()
+    lines: list[str] = []
+    for r in result.rows:
+        line = f"{result.category}|{r.subcategory}|{r.amazon_url}"
+        if line not in seen:
+            seen.add(line)
+            lines.append(line)
+    Path(path).with_suffix(".txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
