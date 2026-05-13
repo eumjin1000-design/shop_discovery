@@ -65,9 +65,12 @@ modules/
   batch_report.py          배치 순위 Excel(Ranking 시트 1장) — 행-딕트 리스트 입력
   shop_namer.py            GO 카테고리용 샵 이름 5개(영어·기억 쉬움·.com 가능) — tier="quality"
   sourcing.py              소싱 리스트 생성. generate_sourcing_list(category, n_subs=6, n_variants=5).
-                           SourcingRow(subcategory, base_product, variant, brand, keyword, est_price,
-                           amazon_node_id, asin, review_count). 변형 풀 10종. 총 행 = n_subs×5×n_variants.
-                           Amazon URL = 노드 검색(rh=n%3A{node_id}+Prime+리뷰순), 노드 없으면 키워드 폴백. — tier="fast"
+                           SourcingRow 9필드. 변형 풀 10종. 총 행 = n_subs×5×n_variants.
+                           노드 ID 결정 순서: ①LLM이 USER_PROMPT 후보 목록에서 선택 → ②_guess_node 로컬
+                           폴백(NODE_DB ~75항목) → ③키워드 검색 URL 폴백(node='1000').
+                           _guess_node: 단어 완전일치 2점 / 부분일치 1점 / GENERIC_WORDS 0.5점 페널티.
+                           _get_node_candidates: 동일 채점으로 상위 5개 추출 → LLM 프롬프트에 주입.
+                           Amazon URL = 노드 검색(rh=n%3A{node}+Prime+리뷰순), 노드 없으면 키워드 폴백. — tier="fast"
   sourcing_report.py       write_sourcing_report(result, shop_name, out_dir). Excel 11열:
                            #·서브카테고리·브랜드·상품명·변형·AmazonURL·예상가격·키워드·ASIN·리뷰수·노드ID.
                            Spark 일괄입력 .txt 파일 동시 생성 (카테고리|서브카테고리|URL 형식, .xlsx와 같은 stem).
