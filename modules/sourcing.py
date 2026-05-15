@@ -21,6 +21,7 @@ import re
 import urllib.parse
 from dataclasses import dataclass
 
+from . import sources
 from .llm import ask_json
 from .util import seeded_rng
 
@@ -32,47 +33,7 @@ _VARIANT_POOL = ["Standard", "Compact", "Premium", "Set of 2", "Travel Size",
 _PRIME_NODE_US = "23533298011"  # p_n_prime_eligibility filter id on amazon.com
 _NODE_NONE = "1000"             # sentinel: no specific browse node guessed
 
-# amazon.com browse-node ids keyed by short phrases — used by _guess_node() to
-# pick a node from category/subcategory text when the LLM did not supply one.
-NODE_DB: dict[str, str] = {
-    # Pet Supplies
-    "pet supplies": "2619533011", "dog supplies": "2619533011", "cat supplies": "2619533011",
-    "fish aquarium": "2619534011", "bird supplies": "3606785011", "small animal": "3606786011",
-    # Health & Beauty
-    "vitamins supplements": "3774861", "health household": "3760901", "sports nutrition": "6973663011",
-    "personal care": "11060451", "skin care": "11060451", "hair care": "11057771", "oral care": "3760931",
-    # Kitchen
-    "kitchen dining": "284507", "cookware": "289914", "bakeware": "289739", "kitchen tools": "289973",
-    "small appliances": "298092", "coffee": "678508011",
-    # Home
-    "home kitchen": "1055398", "bedding": "3732961", "bath": "3610841", "furniture": "1063306",
-    "storage organization": "3737461", "cleaning supplies": "3760901", "lighting": "495224", "led strip": "495224",
-    # Fitness & Sports
-    "sports outdoors": "3375251", "exercise fitness": "3407731", "yoga": "3407731",
-    "camping hiking": "3375381", "cycling": "3403875", "running": "3375271",
-    # Electronics
-    "electronics": "172659", "headphones": "745384", "bluetooth speaker": "172659",
-    "phone accessories": "2335752011", "laptop accessories": "541966", "smart home": "6563140011",
-    "security camera": "172659", "power bank": "172659",
-    # Baby
-    "baby": "165797011", "baby care": "165797011", "diapering": "165796011",
-    "feeding": "166585011", "baby toys": "165793011",
-    # Clothing & Fashion
-    "clothing": "7141123011", "mens clothing": "1036592", "womens clothing": "1045024",
-    "shoes": "672123011", "accessories": "7141123011",
-    # Office
-    "office products": "1069242", "office supplies": "1069242", "desk accessories": "1069242",
-    # Automotive
-    "automotive": "15684181", "car accessories": "15684181", "car electronics": "15684181",
-    # Outdoor & Garden
-    "garden outdoor": "2972638011", "patio furniture": "3732961", "lawn care": "3238155011", "plants": "3238155011",
-    # Toys & Games
-    "toys games": "165793011", "board games": "166925011", "puzzles": "166943011", "outdoor play": "165793011",
-    # Arts & Crafts
-    "arts crafts": "2617942011", "painting": "2617942011", "sewing": "2617942011",
-    # Food & Grocery
-    "grocery food": "16310101", "snacks": "16310101", "beverages": "16310101", "organic food": "16310101",
-}
+from .sourcing_nodes import NODE_DB
 _WORD_RE = re.compile(r"[a-z0-9]+")
 # Words too generic to be a reliable category signal — their match is halved.
 GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
@@ -149,10 +110,12 @@ class SourcingRow:
 
     @property
     def amazon_url(self) -> str:
-        """Browse-node search, Prime-eligible, sorted by review count.
-
-        Falls back to a keyword search when no browse-node id is available.
+        """Real product page when a valid ``asin`` is set, else a browse-node
+        search (Prime, sorted by review count), else a keyword search.
         """
+        a = (self.asin or "").strip().upper()
+        if re.fullmatch(r"[A-Z0-9]{10}", a):
+            return f"https://www.amazon.com/dp/{a}"
         if self.amazon_node_id and self.amazon_node_id != _NODE_NONE:
             rh = (f"n%3A{urllib.parse.quote(str(self.amazon_node_id))}"
                   f"%2Cp_n_prime_eligibility%3A{_PRIME_NODE_US}")
@@ -215,27 +178,46 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
                           n_variants=n_variants, total=total, summary=summary)
 
 
-# LLM prompt template (filled by _from_llm with {category}, {n_subs},
-# {products_n}, {candidates}). Literal JSON braces are doubled for str.format.
+# LLM prompt template. Literal JSON braces are doubled for str.format.
 USER_PROMPT = (
     'For a dropshipping store in the "{category}" niche, propose {n_subs} '
     "subcategories. For each subcategory give:\n"
     "  amazon_node_id : 아래 후보 중 가장 적합한 노드 ID를 선택하세요. 확신이 없으면 빈 문자열.\n"
     "                   후보: {candidates}\n"
-    'and list {products_n} specific product ideas; for each product give a '
-    'likely incumbent "brand", a high-search-volume low-competition "keyword", '
-    'a rough USD retail price "est_price", and if known an "asin" and '
-    '"review_count" (else "" and 0). Return ONLY a JSON array: '
+    'and list {products_n} specific product ideas. {real_block}'
+    'For each product give a likely incumbent "brand", a high-search-volume '
+    'low-competition "keyword", a USD retail "est_price", and "asin" + '
+    '"review_count". When a product matches an entry in REAL_PRODUCTS above, '
+    'COPY its exact asin/brand/est_price/review_count verbatim — do not invent. '
+    'Only invent asin="" / review_count=0 when no real match exists. '
+    'Return ONLY a JSON array: '
     '[{{"subcategory": "...", "amazon_node_id": "...", "products": [{{"name": '
     '"...", "brand": "...", "keyword": "...", "est_price": <num>, "asin": '
     '"...", "review_count": <int>}}, ...]}}, ...]. No prose.'
 )
 
 
+def _real_products_block(category: str, n_subs: int) -> str:
+    """Pre-fetched Keepa top sellers as a prompt block; ``""`` when disabled."""
+    target = max(15, n_subs * PRODUCTS_N)
+    rows = sources.keepa_top_asins(category, n=target) or []
+    if not rows:
+        return ""
+    lines = [
+        f"- {r['asin']} | {r.get('brand') or '?'} | "
+        f"${r.get('est_price') or '?'} | {r.get('review_count') or 0} reviews | "
+        f"{r.get('title') or ''}"
+        for r in rows
+    ]
+    return ("REAL_PRODUCTS (real Amazon best sellers — assign these ASINs to "
+            f"the most appropriate subcategory):\n" + "\n".join(lines) + "\n")
+
+
 def _from_llm(category: str, n_subs: int) -> list[dict] | None:
     prompt = USER_PROMPT.format(
         category=category, n_subs=n_subs, products_n=PRODUCTS_N,
         candidates=_get_node_candidates(category) or "(없음 — 빈 문자열로 두세요)",
+        real_block=_real_products_block(category, n_subs),
     )
     data = ask_json(prompt, max_tokens=3500)
     if not isinstance(data, list):

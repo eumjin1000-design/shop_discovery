@@ -19,6 +19,7 @@ from typing import Optional
 # Per-process caches so a pipeline run hits each provider at most once per key.
 _KW_CACHE: dict[tuple[str, ...], Optional[dict]] = {}
 _KEEPA_CACHE: dict[str, Optional[dict]] = {}
+_KEEPA_ASINS_CACHE: dict[str, Optional[list[dict]]] = {}
 
 
 def _env(name: str) -> Optional[str]:
@@ -103,9 +104,10 @@ def trend_signal(trend_values: list[int]) -> Optional[dict]:
 # --------------------------------------------------------------------------
 # Keepa — Amazon sales rank, rating, review count for a category's top products
 # --------------------------------------------------------------------------
-# Keepa "stats.current" CSV indices: 3 = SALES rank, 16 = RATING (0..50),
-# 17 = COUNT_REVIEWS. See https://keepa.com/#!discuss/t/product-object/116
-_IDX_SALES, _IDX_RATING, _IDX_REVIEWS = 3, 16, 17
+# Keepa "stats.current" CSV indices: 0 = AMAZON price, 1 = NEW price,
+# 3 = SALES rank, 16 = RATING (0..50), 17 = COUNT_REVIEWS.
+# See https://keepa.com/#!discuss/t/product-object/116
+_IDX_AMAZON, _IDX_NEW, _IDX_SALES, _IDX_RATING, _IDX_REVIEWS = 0, 1, 3, 16, 17
 
 
 def keepa_snapshot(category: str) -> Optional[dict]:
@@ -175,3 +177,65 @@ def keepa_snapshot(category: str) -> Optional[dict]:
 
     _KEEPA_CACHE[category] = snapshot
     return snapshot
+
+
+def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
+    """Top-N best-selling ASINs in ``category`` with real brand/price/reviews.
+
+    One Keepa round-trip (~50 tokens for best_sellers_query + 1 per ASIN).
+    Cached per ``(category, n)``. Returns ``None`` on any failure.
+    """
+    key = _env("KEEPA_API_KEY")
+    if not key:
+        return None
+    cache_key = f"{category}::{n}"
+    if cache_key in _KEEPA_ASINS_CACHE:
+        return _KEEPA_ASINS_CACHE[cache_key]
+
+    result: Optional[list[dict]] = None
+    try:
+        import keepa
+
+        api = keepa.Keepa(key)
+        cats = api.search_for_categories(category) or {}
+        cat_id = next(iter(cats), None)
+        if cat_id is None:
+            raise RuntimeError("no matching Keepa category")
+        asins = list(api.best_sellers_query(cat_id, domain="US") or [])[:n]
+        if not asins:
+            raise RuntimeError("no best sellers returned")
+
+        products = api.query(asins, domain="US", stats=90, rating=1, history=False) or []
+        out: list[dict] = []
+        for p in products:
+            asin = str(p.get("asin") or "").strip().upper()
+            if len(asin) != 10:
+                continue
+            cur = ((p.get("stats") or {}).get("current")) or []
+
+            def _cents(idx: int) -> Optional[float]:
+                if len(cur) > idx and isinstance(cur[idx], int) and cur[idx] > 0:
+                    return round(cur[idx] / 100.0, 2)
+                return None
+
+            price = _cents(_IDX_AMAZON) or _cents(_IDX_NEW)
+            rating = None
+            if len(cur) > _IDX_RATING and isinstance(cur[_IDX_RATING], int) and cur[_IDX_RATING] > 0:
+                rating = round(cur[_IDX_RATING] / 10.0, 2)
+            reviews = 0
+            if len(cur) > _IDX_REVIEWS and isinstance(cur[_IDX_REVIEWS], int) and cur[_IDX_REVIEWS] > 0:
+                reviews = int(cur[_IDX_REVIEWS])
+            out.append({
+                "asin": asin,
+                "title": (str(p.get("title") or ""))[:120],
+                "brand": str(p.get("brand") or "").strip(),
+                "est_price": price,
+                "rating": rating,
+                "review_count": reviews,
+            })
+        result = out or None
+    except Exception:
+        result = None
+
+    _KEEPA_ASINS_CACHE[cache_key] = result
+    return result
