@@ -198,9 +198,14 @@ USER_PROMPT = (
 
 
 def _real_products_block(category: str, n_subs: int) -> str:
-    """Pre-fetched Keepa top sellers as a prompt block; ``""`` when disabled."""
+    """Pre-fetched real top sellers as a prompt block; ``""`` when no source
+    is available. Tries the local HF dataset first (free, offline) and falls
+    back to Keepa (paid, live).
+    """
     target = max(15, n_subs * PRODUCTS_N)
-    rows = sources.keepa_top_asins(category, n=target) or []
+    rows = (sources.dataset_top_asins(category, n=target)
+            or sources.keepa_top_asins(category, n=target)
+            or [])
     if not rows:
         return ""
     lines = [

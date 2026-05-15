@@ -1,5 +1,5 @@
 {
-  "elapsed_sec": 8.0,
+  "elapsed_sec": 307.8,
   "results": [
     {
       "asin": "B01LNT83KK",
@@ -45,10 +45,1768 @@
       "verdict": "live",
       "category": "All_Beauty",
       "review_count": 15185
+    },
+    {
+      "asin": "B01EY8LK4I",
+      "url": "https://www.amazon.com/dp/B01EY8LK4I",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01EY8LK4I",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 14700
+    },
+    {
+      "asin": "B07G19ZXWB",
+      "url": "https://www.amazon.com/dp/B07G19ZXWB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07G19ZXWB",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 13676
+    },
+    {
+      "asin": "B072VBF6M4",
+      "url": "https://www.amazon.com/dp/B072VBF6M4",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B072VBF6M4",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12870
+    },
+    {
+      "asin": "B07VPR5W4D",
+      "url": "https://www.amazon.com/dp/B07VPR5W4D",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07VPR5W4D",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12205
+    },
+    {
+      "asin": "B01I24RSH8",
+      "url": "https://www.amazon.com/dp/B01I24RSH8",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01I24RSH8",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12205
+    },
+    {
+      "asin": "B07VPRRWLL",
+      "url": "https://www.amazon.com/dp/B07VPRRWLL",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07VPRRWLL",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12203
+    },
+    {
+      "asin": "B0731PV37L",
+      "url": "https://www.amazon.com/dp/B0731PV37L",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0731PV37L",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12198
+    },
+    {
+      "asin": "B0775YJB4B",
+      "url": "https://www.amazon.com/dp/B0775YJB4B",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0775YJB4B",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 12196
+    },
+    {
+      "asin": "B06Y42Q164",
+      "url": "https://www.amazon.com/dp/B06Y42Q164",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B06Y42Q164",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 11919
+    },
+    {
+      "asin": "B07C533XCW",
+      "url": "https://www.amazon.com/dp/B07C533XCW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07C533XCW",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 11918
+    },
+    {
+      "asin": "B0C9CWKY9G",
+      "url": "https://www.amazon.com/dp/B0C9CWKY9G",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0C9CWKY9G",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 11485
+    },
+    {
+      "asin": "B077YR59ZR",
+      "url": "https://www.amazon.com/dp/B077YR59ZR",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B077YR59ZR",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 11184
+    },
+    {
+      "asin": "B08SQG7VRV",
+      "url": "https://www.amazon.com/dp/B08SQG7VRV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08SQG7VRV",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10913
+    },
+    {
+      "asin": "B01N47XMWS",
+      "url": "https://www.amazon.com/dp/B01N47XMWS",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01N47XMWS",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10913
+    },
+    {
+      "asin": "B00P7XF3K2",
+      "url": "https://www.amazon.com/dp/B00P7XF3K2",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B00P7XF3K2",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 10908
+    },
+    {
+      "asin": "B07BHV5CTJ",
+      "url": "https://www.amazon.com/dp/B07BHV5CTJ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07BHV5CTJ",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10793
+    },
+    {
+      "asin": "B01I24RDRI",
+      "url": "https://www.amazon.com/dp/B01I24RDRI",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01I24RDRI",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10789
+    },
+    {
+      "asin": "B0754NNC9Z",
+      "url": "https://www.amazon.com/dp/B0754NNC9Z",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0754NNC9Z",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10779
+    },
+    {
+      "asin": "B01BX7BY76",
+      "url": "https://www.amazon.com/dp/B01BX7BY76",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01BX7BY76",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10775
+    },
+    {
+      "asin": "B07YG62DQR",
+      "url": "https://www.amazon.com/dp/B07YG62DQR",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07YG62DQR",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10775
+    },
+    {
+      "asin": "B01M7X20F1",
+      "url": "https://www.amazon.com/dp/B01M7X20F1",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01M7X20F1",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10626
+    },
+    {
+      "asin": "B01AIQL694",
+      "url": "https://www.amazon.com/dp/B01AIQL694",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01AIQL694",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10476
+    },
+    {
+      "asin": "B08MDDQNTV",
+      "url": "https://www.amazon.com/dp/B08MDDQNTV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08MDDQNTV",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10401
+    },
+    {
+      "asin": "B08MDF1MSF",
+      "url": "https://www.amazon.com/dp/B08MDF1MSF",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08MDF1MSF",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10399
+    },
+    {
+      "asin": "B07GXCV3VQ",
+      "url": "https://www.amazon.com/dp/B07GXCV3VQ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07GXCV3VQ",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 10048
+    },
+    {
+      "asin": "B09X9BG4FC",
+      "url": "https://www.amazon.com/dp/B09X9BG4FC",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09X9BG4FC",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 9880
+    },
+    {
+      "asin": "B07H5F9P74",
+      "url": "https://www.amazon.com/dp/B07H5F9P74",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B07H5F9P74",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 9455
+    },
+    {
+      "asin": "B075WYW77V",
+      "url": "https://www.amazon.com/dp/B075WYW77V",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B075WYW77V",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 9436
+    },
+    {
+      "asin": "B085BB7B1M",
+      "url": "https://www.amazon.com/dp/B085BB7B1M",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B085BB7B1M",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 9101
+    },
+    {
+      "asin": "B07JJKSR3B",
+      "url": "https://www.amazon.com/dp/B07JJKSR3B",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07JJKSR3B",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 8727
+    },
+    {
+      "asin": "B0BM4GX6TT",
+      "url": "https://www.amazon.com/dp/B0BM4GX6TT",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BM4GX6TT",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 8691
+    },
+    {
+      "asin": "B01M1OFZOG",
+      "url": "https://www.amazon.com/dp/B01M1OFZOG",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01M1OFZOG",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 8144
+    },
+    {
+      "asin": "B0B96MFXSJ",
+      "url": "https://www.amazon.com/dp/B0B96MFXSJ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0B96MFXSJ",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 8134
+    },
+    {
+      "asin": "B007E9I11K",
+      "url": "https://www.amazon.com/dp/B007E9I11K",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B007E9I11K",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7960
+    },
+    {
+      "asin": "B08L5KN7X4",
+      "url": "https://www.amazon.com/dp/B08L5KN7X4",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B08L5KN7X4",
+      "verdict": "dead_404",
+      "category": "All_Beauty",
+      "review_count": 7944
+    },
+    {
+      "asin": "B08D437695",
+      "url": "https://www.amazon.com/dp/B08D437695",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08D437695",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7813
+    },
+    {
+      "asin": "B0050HW9PW",
+      "url": "https://www.amazon.com/dp/B0050HW9PW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0050HW9PW",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7558
+    },
+    {
+      "asin": "B008R5LW5W",
+      "url": "https://www.amazon.com/dp/B008R5LW5W",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B008R5LW5W",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7308
+    },
+    {
+      "asin": "B001DZVELU",
+      "url": "https://www.amazon.com/dp/B001DZVELU",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B001DZVELU",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7185
+    },
+    {
+      "asin": "B078KHP29L",
+      "url": "https://www.amazon.com/dp/B078KHP29L",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B078KHP29L",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7098
+    },
+    {
+      "asin": "B09C2ZW2GL",
+      "url": "https://www.amazon.com/dp/B09C2ZW2GL",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09C2ZW2GL",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7060
+    },
+    {
+      "asin": "B01FG2RLOE",
+      "url": "https://www.amazon.com/dp/B01FG2RLOE",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01FG2RLOE",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7014
+    },
+    {
+      "asin": "B09LHS6RGF",
+      "url": "https://www.amazon.com/dp/B09LHS6RGF",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09LHS6RGF",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 7012
+    },
+    {
+      "asin": "B01412X46Y",
+      "url": "https://www.amazon.com/dp/B01412X46Y",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01412X46Y",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 6956
+    },
+    {
+      "asin": "B00BXGVIII",
+      "url": "https://www.amazon.com/dp/B00BXGVIII",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B00BXGVIII",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 6930
+    },
+    {
+      "asin": "B0BSGM6CQ9",
+      "url": "https://www.amazon.com/dp/B0BSGM6CQ9",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BSGM6CQ9",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 100615
+    },
+    {
+      "asin": "B09W4F2X6S",
+      "url": "https://www.amazon.com/dp/B09W4F2X6S",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09W4F2X6S",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 79425
+    },
+    {
+      "asin": "B076B8G5D8",
+      "url": "https://www.amazon.com/dp/B076B8G5D8",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B076B8G5D8",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 68708
+    },
+    {
+      "asin": "B0BTC9YJ2W",
+      "url": "https://www.amazon.com/dp/B0BTC9YJ2W",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BTC9YJ2W",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 60133
+    },
+    {
+      "asin": "B018FCZKR2",
+      "url": "https://www.amazon.com/dp/B018FCZKR2",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B018FCZKR2",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 55452
+    },
+    {
+      "asin": "B09RN7GR8F",
+      "url": "https://www.amazon.com/dp/B09RN7GR8F",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09RN7GR8F",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 43271
+    },
+    {
+      "asin": "B06X9KG3HW",
+      "url": "https://www.amazon.com/dp/B06X9KG3HW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B06X9KG3HW",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 39853
+    },
+    {
+      "asin": "B0BZK3X11C",
+      "url": "https://www.amazon.com/dp/B0BZK3X11C",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BZK3X11C",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 39352
+    },
+    {
+      "asin": "B0BPJ4Q6FJ",
+      "url": "https://www.amazon.com/dp/B0BPJ4Q6FJ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BPJ4Q6FJ",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 37890
+    },
+    {
+      "asin": "B08T9CCXZB",
+      "url": "https://www.amazon.com/dp/B08T9CCXZB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08T9CCXZB",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 36426
+    },
+    {
+      "asin": "B0BHSG5C3G",
+      "url": "https://www.amazon.com/dp/B0BHSG5C3G",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BHSG5C3G",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 34682
+    },
+    {
+      "asin": "B0C5YS1Q4S",
+      "url": "https://www.amazon.com/dp/B0C5YS1Q4S",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C5YS1Q4S",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 33267
+    },
+    {
+      "asin": "B0BWQ92ZPY",
+      "url": "https://www.amazon.com/dp/B0BWQ92ZPY",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0BWQ92ZPY",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 33152
+    },
+    {
+      "asin": "B06ZYJ6SJZ",
+      "url": "https://www.amazon.com/dp/B06ZYJ6SJZ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B06ZYJ6SJZ",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 31902
+    },
+    {
+      "asin": "B000GJ0KNW",
+      "url": "https://www.amazon.com/dp/B000GJ0KNW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B000GJ0KNW",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 30451
+    },
+    {
+      "asin": "B0C6H9T5T6",
+      "url": "https://www.amazon.com/dp/B0C6H9T5T6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C6H9T5T6",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 30314
+    },
+    {
+      "asin": "B0BG95DG2H",
+      "url": "https://www.amazon.com/dp/B0BG95DG2H",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BG95DG2H",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 29710
+    },
+    {
+      "asin": "B09BF8XDF4",
+      "url": "https://www.amazon.com/dp/B09BF8XDF4",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09BF8XDF4",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 29394
+    },
+    {
+      "asin": "B0C43X1YDH",
+      "url": "https://www.amazon.com/dp/B0C43X1YDH",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C43X1YDH",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 28611
+    },
+    {
+      "asin": "B0BTR12G3V",
+      "url": "https://www.amazon.com/dp/B0BTR12G3V",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0BTR12G3V",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 28430
+    },
+    {
+      "asin": "B0BFKKVQZT",
+      "url": "https://www.amazon.com/dp/B0BFKKVQZT",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BFKKVQZT",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 28412
+    },
+    {
+      "asin": "B007MY5BDI",
+      "url": "https://www.amazon.com/dp/B007MY5BDI",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B007MY5BDI",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 28112
+    },
+    {
+      "asin": "B0BPKH4HB2",
+      "url": "https://www.amazon.com/dp/B0BPKH4HB2",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BPKH4HB2",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 26780
+    },
+    {
+      "asin": "B01MDU5U60",
+      "url": "https://www.amazon.com/dp/B01MDU5U60",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01MDU5U60",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 26554
+    },
+    {
+      "asin": "B07GFH8NTB",
+      "url": "https://www.amazon.com/dp/B07GFH8NTB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07GFH8NTB",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 26373
+    },
+    {
+      "asin": "B0BFKQ9QXD",
+      "url": "https://www.amazon.com/dp/B0BFKQ9QXD",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BFKQ9QXD",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 26283
+    },
+    {
+      "asin": "B0B16WH36J",
+      "url": "https://www.amazon.com/dp/B0B16WH36J",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0B16WH36J",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 25422
+    },
+    {
+      "asin": "B09857JRP2",
+      "url": "https://www.amazon.com/dp/B09857JRP2",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09857JRP2",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 25245
+    },
+    {
+      "asin": "B0BKZ3GCGR",
+      "url": "https://www.amazon.com/dp/B0BKZ3GCGR",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BKZ3GCGR",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 25159
+    },
+    {
+      "asin": "B0BT9R8MMV",
+      "url": "https://www.amazon.com/dp/B0BT9R8MMV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BT9R8MMV",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 24921
+    },
+    {
+      "asin": "B09PH4DV67",
+      "url": "https://www.amazon.com/dp/B09PH4DV67",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09PH4DV67",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 24634
+    },
+    {
+      "asin": "B07H5HM6F6",
+      "url": "https://www.amazon.com/dp/B07H5HM6F6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07H5HM6F6",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 24400
+    },
+    {
+      "asin": "B0B7896KQT",
+      "url": "https://www.amazon.com/dp/B0B7896KQT",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0B7896KQT",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 24368
+    },
+    {
+      "asin": "B09V91H5XM",
+      "url": "https://www.amazon.com/dp/B09V91H5XM",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09V91H5XM",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 23354
+    },
+    {
+      "asin": "B09Y1X5BSC",
+      "url": "https://www.amazon.com/dp/B09Y1X5BSC",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09Y1X5BSC",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 23159
+    },
+    {
+      "asin": "B098LHYD3K",
+      "url": "https://www.amazon.com/dp/B098LHYD3K",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B098LHYD3K",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 22745
+    },
+    {
+      "asin": "B08R5M2FGY",
+      "url": "https://www.amazon.com/dp/B08R5M2FGY",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B08R5M2FGY",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 22397
+    },
+    {
+      "asin": "B09NWCD36N",
+      "url": "https://www.amazon.com/dp/B09NWCD36N",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09NWCD36N",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 22347
+    },
+    {
+      "asin": "B09T4TND5G",
+      "url": "https://www.amazon.com/dp/B09T4TND5G",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09T4TND5G",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 22057
+    },
+    {
+      "asin": "B01B15JPCQ",
+      "url": "https://www.amazon.com/dp/B01B15JPCQ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01B15JPCQ",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 21965
+    },
+    {
+      "asin": "B0BBG39TZ9",
+      "url": "https://www.amazon.com/dp/B0BBG39TZ9",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0BBG39TZ9",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 21641
+    },
+    {
+      "asin": "B0BCK6L7S5",
+      "url": "https://www.amazon.com/dp/B0BCK6L7S5",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BCK6L7S5",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 21461
+    },
+    {
+      "asin": "B07CYRYQ8G",
+      "url": "https://www.amazon.com/dp/B07CYRYQ8G",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07CYRYQ8G",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 20370
+    },
+    {
+      "asin": "B0BJ8WDC13",
+      "url": "https://www.amazon.com/dp/B0BJ8WDC13",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BJ8WDC13",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 19704
+    },
+    {
+      "asin": "B08FDBCYHL",
+      "url": "https://www.amazon.com/dp/B08FDBCYHL",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08FDBCYHL",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 19689
+    },
+    {
+      "asin": "B0C29K9R76",
+      "url": "https://www.amazon.com/dp/B0C29K9R76",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C29K9R76",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 19656
+    },
+    {
+      "asin": "B08JMQR2JK",
+      "url": "https://www.amazon.com/dp/B08JMQR2JK",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08JMQR2JK",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 18219
+    },
+    {
+      "asin": "B07SRDVZSL",
+      "url": "https://www.amazon.com/dp/B07SRDVZSL",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07SRDVZSL",
+      "verdict": "live",
+      "category": "Musical_Instruments",
+      "review_count": 17930
+    },
+    {
+      "asin": "B0C4QLWXGW",
+      "url": "https://www.amazon.com/dp/B0C4QLWXGW",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0C4QLWXGW",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 17536
+    },
+    {
+      "asin": "B09W5LPHBZ",
+      "url": "https://www.amazon.com/dp/B09W5LPHBZ",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09W5LPHBZ",
+      "verdict": "dead_404",
+      "category": "Musical_Instruments",
+      "review_count": 17434
+    },
+    {
+      "asin": "B004S8F7QM",
+      "url": "https://www.amazon.com/dp/B004S8F7QM",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B004S8F7QM",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 135365
+    },
+    {
+      "asin": "B011MXKAYO",
+      "url": "https://www.amazon.com/dp/B011MXKAYO",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B011MXKAYO",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 135308
+    },
+    {
+      "asin": "B0953YFR2M",
+      "url": "https://www.amazon.com/dp/B0953YFR2M",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0953YFR2M",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 124977
+    },
+    {
+      "asin": "B0C5JBWJB6",
+      "url": "https://www.amazon.com/dp/B0C5JBWJB6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C5JBWJB6",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 96586
+    },
+    {
+      "asin": "B0BG3XRKH2",
+      "url": "https://www.amazon.com/dp/B0BG3XRKH2",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BG3XRKH2",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 96108
+    },
+    {
+      "asin": "B0721L3GDB",
+      "url": "https://www.amazon.com/dp/B0721L3GDB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0721L3GDB",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 72303
+    },
+    {
+      "asin": "B0C63SM4FM",
+      "url": "https://www.amazon.com/dp/B0C63SM4FM",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C63SM4FM",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 50483
+    },
+    {
+      "asin": "B0B5BW367Q",
+      "url": "https://www.amazon.com/dp/B0B5BW367Q",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0B5BW367Q",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 49230
+    },
+    {
+      "asin": "B08XD3WW2H",
+      "url": "https://www.amazon.com/dp/B08XD3WW2H",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08XD3WW2H",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 49102
+    },
+    {
+      "asin": "B09C6M7F93",
+      "url": "https://www.amazon.com/dp/B09C6M7F93",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09C6M7F93",
+      "verdict": "dead_404",
+      "category": "Toys_and_Games",
+      "review_count": 48759
+    },
+    {
+      "asin": "B09PGXKYM9",
+      "url": "https://www.amazon.com/dp/B09PGXKYM9",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09PGXKYM9",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 47471
+    },
+    {
+      "asin": "B0BSP7FXS8",
+      "url": "https://www.amazon.com/dp/B0BSP7FXS8",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BSP7FXS8",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 47346
+    },
+    {
+      "asin": "B09NTXBJDM",
+      "url": "https://www.amazon.com/dp/B09NTXBJDM",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09NTXBJDM",
+      "verdict": "dead_404",
+      "category": "Toys_and_Games",
+      "review_count": 46793
+    },
+    {
+      "asin": "B01MQ3YP7Y",
+      "url": "https://www.amazon.com/dp/B01MQ3YP7Y",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01MQ3YP7Y",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 44143
+    },
+    {
+      "asin": "B09JDFD5NQ",
+      "url": "https://www.amazon.com/dp/B09JDFD5NQ",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B09JDFD5NQ",
+      "verdict": "dead_404",
+      "category": "Toys_and_Games",
+      "review_count": 44075
+    },
+    {
+      "asin": "B0BKVYHDFX",
+      "url": "https://www.amazon.com/dp/B0BKVYHDFX",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BKVYHDFX",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 42898
+    },
+    {
+      "asin": "B00068Q7LC",
+      "url": "https://www.amazon.com/dp/B00068Q7LC",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B00068Q7LC",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 42565
+    },
+    {
+      "asin": "B0BRKW9RB2",
+      "url": "https://www.amazon.com/dp/B0BRKW9RB2",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BRKW9RB2",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 40672
+    },
+    {
+      "asin": "B0BXQ9JC92",
+      "url": "https://www.amazon.com/dp/B0BXQ9JC92",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BXQ9JC92",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 40667
+    },
+    {
+      "asin": "B0BFXK2HJW",
+      "url": "https://www.amazon.com/dp/B0BFXK2HJW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BFXK2HJW",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 40335
+    },
+    {
+      "asin": "B084PTVQLZ",
+      "url": "https://www.amazon.com/dp/B084PTVQLZ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B084PTVQLZ",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 40026
+    },
+    {
+      "asin": "B0BMZK2XMV",
+      "url": "https://www.amazon.com/dp/B0BMZK2XMV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BMZK2XMV",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 38669
+    },
+    {
+      "asin": "B00000IZKX",
+      "url": "https://www.amazon.com/dp/B00000IZKX",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B00000IZKX",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 38177
+    },
+    {
+      "asin": "B0C5DXDNQ6",
+      "url": "https://www.amazon.com/dp/B0C5DXDNQ6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C5DXDNQ6",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 37836
+    },
+    {
+      "asin": "B08KJZ2RTC",
+      "url": "https://www.amazon.com/dp/B08KJZ2RTC",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08KJZ2RTC",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 37453
+    },
+    {
+      "asin": "B01KJEOCDW",
+      "url": "https://www.amazon.com/dp/B01KJEOCDW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01KJEOCDW",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 37084
+    },
+    {
+      "asin": "B0BS2VN6PQ",
+      "url": "https://www.amazon.com/dp/B0BS2VN6PQ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BS2VN6PQ",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 36872
+    },
+    {
+      "asin": "B087P3G17S",
+      "url": "https://www.amazon.com/dp/B087P3G17S",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B087P3G17S",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 34627
+    },
+    {
+      "asin": "B08S3NSR2T",
+      "url": "https://www.amazon.com/dp/B08S3NSR2T",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08S3NSR2T",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 34450
+    },
+    {
+      "asin": "B0BZJFF2BF",
+      "url": "https://www.amazon.com/dp/B0BZJFF2BF",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BZJFF2BF",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 34326
+    },
+    {
+      "asin": "B08Z3NV3QK",
+      "url": "https://www.amazon.com/dp/B08Z3NV3QK",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B08Z3NV3QK",
+      "verdict": "dead_404",
+      "category": "Toys_and_Games",
+      "review_count": 34047
+    },
+    {
+      "asin": "B07JC5GND1",
+      "url": "https://www.amazon.com/dp/B07JC5GND1",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07JC5GND1",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 33937
+    },
+    {
+      "asin": "B08NPPWJN9",
+      "url": "https://www.amazon.com/dp/B08NPPWJN9",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08NPPWJN9",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 33656
+    },
+    {
+      "asin": "B0BG94QRLZ",
+      "url": "https://www.amazon.com/dp/B0BG94QRLZ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BG94QRLZ",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 33633
+    },
+    {
+      "asin": "B0B3D2M5HM",
+      "url": "https://www.amazon.com/dp/B0B3D2M5HM",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0B3D2M5HM",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 33438
+    },
+    {
+      "asin": "B0BNR4VHMV",
+      "url": "https://www.amazon.com/dp/B0BNR4VHMV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BNR4VHMV",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 33301
+    },
+    {
+      "asin": "B08L58GW4F",
+      "url": "https://www.amazon.com/dp/B08L58GW4F",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08L58GW4F",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 32474
+    },
+    {
+      "asin": "B0000AP6LD",
+      "url": "https://www.amazon.com/dp/B0000AP6LD",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0000AP6LD",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 32249
+    },
+    {
+      "asin": "B08GDD3NR6",
+      "url": "https://www.amazon.com/dp/B08GDD3NR6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08GDD3NR6",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 32171
+    },
+    {
+      "asin": "B09FSGVW4X",
+      "url": "https://www.amazon.com/dp/B09FSGVW4X",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09FSGVW4X",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 31813
+    },
+    {
+      "asin": "B07YNZX2KX",
+      "url": "https://www.amazon.com/dp/B07YNZX2KX",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07YNZX2KX",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 31531
+    },
+    {
+      "asin": "B088PPN2NN",
+      "url": "https://www.amazon.com/dp/B088PPN2NN",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B088PPN2NN",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 31414
+    },
+    {
+      "asin": "B0BZ6PX8N6",
+      "url": "https://www.amazon.com/dp/B0BZ6PX8N6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BZ6PX8N6",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 30805
+    },
+    {
+      "asin": "B09DHCTPG7",
+      "url": "https://www.amazon.com/dp/B09DHCTPG7",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09DHCTPG7",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 30515
+    },
+    {
+      "asin": "B0962JC6B5",
+      "url": "https://www.amazon.com/dp/B0962JC6B5",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0962JC6B5",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 30343
+    },
+    {
+      "asin": "B09NPJGN9N",
+      "url": "https://www.amazon.com/dp/B09NPJGN9N",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09NPJGN9N",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 30339
+    },
+    {
+      "asin": "B01HRLW1LU",
+      "url": "https://www.amazon.com/dp/B01HRLW1LU",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01HRLW1LU",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 30312
+    },
+    {
+      "asin": "B08K7ST2ZT",
+      "url": "https://www.amazon.com/dp/B08K7ST2ZT",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08K7ST2ZT",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 29489
+    },
+    {
+      "asin": "B096K27SYK",
+      "url": "https://www.amazon.com/dp/B096K27SYK",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B096K27SYK",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 29305
+    },
+    {
+      "asin": "B014Q1XX9S",
+      "url": "https://www.amazon.com/dp/B014Q1XX9S",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B014Q1XX9S",
+      "verdict": "live",
+      "category": "Toys_and_Games",
+      "review_count": 28982
+    },
+    {
+      "asin": "B0BGNG1294",
+      "url": "https://www.amazon.com/dp/B0BGNG1294",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BGNG1294",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 507202
+    },
+    {
+      "asin": "B08CLNX58K",
+      "url": "https://www.amazon.com/dp/B08CLNX58K",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08CLNX58K",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 402800
+    },
+    {
+      "asin": "B09V1FT19S",
+      "url": "https://www.amazon.com/dp/B09V1FT19S",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09V1FT19S",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 337225
+    },
+    {
+      "asin": "B075X8471B",
+      "url": "https://www.amazon.com/dp/B075X8471B",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B075X8471B",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 315583
+    },
+    {
+      "asin": "B08F9ZCTCL",
+      "url": "https://www.amazon.com/dp/B08F9ZCTCL",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08F9ZCTCL",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 262857
+    },
+    {
+      "asin": "B07N8VFFNS",
+      "url": "https://www.amazon.com/dp/B07N8VFFNS",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07N8VFFNS",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 251708
+    },
+    {
+      "asin": "B0BWD4WGJB",
+      "url": "https://www.amazon.com/dp/B0BWD4WGJB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BWD4WGJB",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 247517
+    },
+    {
+      "asin": "B0C3NMZ2C7",
+      "url": "https://www.amazon.com/dp/B0C3NMZ2C7",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C3NMZ2C7",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 237117
+    },
+    {
+      "asin": "B07PHQ93TV",
+      "url": "https://www.amazon.com/dp/B07PHQ93TV",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07PHQ93TV",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 208437
+    },
+    {
+      "asin": "B0756HHHL2",
+      "url": "https://www.amazon.com/dp/B0756HHHL2",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0756HHHL2",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 201544
+    },
+    {
+      "asin": "B09ZQ4GHM8",
+      "url": "https://www.amazon.com/dp/B09ZQ4GHM8",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09ZQ4GHM8",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 200186
+    },
+    {
+      "asin": "B08CKZ36N7",
+      "url": "https://www.amazon.com/dp/B08CKZ36N7",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B08CKZ36N7",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 193561
+    },
+    {
+      "asin": "B0BW4PFM58",
+      "url": "https://www.amazon.com/dp/B0BW4PFM58",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0BW4PFM58",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 190291
+    },
+    {
+      "asin": "B07TMJ8S5Z",
+      "url": "https://www.amazon.com/dp/B07TMJ8S5Z",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07TMJ8S5Z",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 172296
+    },
+    {
+      "asin": "B08F6GPRH6",
+      "url": "https://www.amazon.com/dp/B08F6GPRH6",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08F6GPRH6",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 172067
+    },
+    {
+      "asin": "B07PGL2N7J",
+      "url": "https://www.amazon.com/dp/B07PGL2N7J",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07PGL2N7J",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 167617
+    },
+    {
+      "asin": "B08XVF418R",
+      "url": "https://www.amazon.com/dp/B08XVF418R",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08XVF418R",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 166565
+    },
+    {
+      "asin": "B0864SF4GC",
+      "url": "https://www.amazon.com/dp/B0864SF4GC",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0864SF4GC",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 158747
+    },
+    {
+      "asin": "B0BGS23YKX",
+      "url": "https://www.amazon.com/dp/B0BGS23YKX",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0BGS23YKX",
+      "verdict": "dead_404",
+      "category": "Electronics",
+      "review_count": 157069
+    },
+    {
+      "asin": "B0BJW5LJ4J",
+      "url": "https://www.amazon.com/dp/B0BJW5LJ4J",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0BJW5LJ4J",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 149385
+    },
+    {
+      "asin": "B0BXZ4D1C2",
+      "url": "https://www.amazon.com/dp/B0BXZ4D1C2",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0BXZ4D1C2",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 143891
+    },
+    {
+      "asin": "B07PWCN4LC",
+      "url": "https://www.amazon.com/dp/B07PWCN4LC",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B07PWCN4LC",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 140739
+    },
+    {
+      "asin": "B07S764D9V",
+      "url": "https://www.amazon.com/dp/B07S764D9V",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07S764D9V",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 136251
+    },
+    {
+      "asin": "B0BJW2XLMR",
+      "url": "https://www.amazon.com/dp/B0BJW2XLMR",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0BJW2XLMR",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 135078
+    },
+    {
+      "asin": "B010BWYDYA",
+      "url": "https://www.amazon.com/dp/B010BWYDYA",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B010BWYDYA",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 133589
+    },
+    {
+      "asin": "B07XY2ZKYB",
+      "url": "https://www.amazon.com/dp/B07XY2ZKYB",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07XY2ZKYB",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 129585
+    },
+    {
+      "asin": "B0BMQJYLQV",
+      "url": "https://www.amazon.com/dp/B0BMQJYLQV",
+      "status": 404,
+      "final_url": "https://www.amazon.com/dp/B0BMQJYLQV",
+      "verdict": "dead_404",
+      "category": "Electronics",
+      "review_count": 124932
+    },
+    {
+      "asin": "B07J2FGZSM",
+      "url": "https://www.amazon.com/dp/B07J2FGZSM",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07J2FGZSM",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 124872
+    },
+    {
+      "asin": "B0C3HNDTW1",
+      "url": "https://www.amazon.com/dp/B0C3HNDTW1",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0C3HNDTW1",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 124429
+    },
+    {
+      "asin": "B09B36FJVT",
+      "url": "https://www.amazon.com/dp/B09B36FJVT",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B09B36FJVT",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 122827
+    },
+    {
+      "asin": "B082WJBWX4",
+      "url": "https://www.amazon.com/dp/B082WJBWX4",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B082WJBWX4",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 122337
+    },
+    {
+      "asin": "B092HSPZJ3",
+      "url": "https://www.amazon.com/dp/B092HSPZJ3",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B092HSPZJ3",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 121846
+    },
+    {
+      "asin": "B0BRZPCQNJ",
+      "url": "https://www.amazon.com/dp/B0BRZPCQNJ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BRZPCQNJ",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 121509
+    },
+    {
+      "asin": "B07V6CGGW2",
+      "url": "https://www.amazon.com/dp/B07V6CGGW2",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B07V6CGGW2",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 117795
+    },
+    {
+      "asin": "B0BZLBL1L9",
+      "url": "https://www.amazon.com/dp/B0BZLBL1L9",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B0BZLBL1L9",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 117733
+    },
+    {
+      "asin": "B0C2P7CNWG",
+      "url": "https://www.amazon.com/dp/B0C2P7CNWG",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0C2P7CNWG",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 117556
+    },
+    {
+      "asin": "B00EVO6I8Y",
+      "url": "https://www.amazon.com/dp/B00EVO6I8Y",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B00EVO6I8Y",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 117458
+    },
+    {
+      "asin": "B08TMJFSV3",
+      "url": "https://www.amazon.com/dp/B08TMJFSV3",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B08TMJFSV3",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 117047
+    },
+    {
+      "asin": "B0B4SWZTZ1",
+      "url": "https://www.amazon.com/dp/B0B4SWZTZ1",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0B4SWZTZ1",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 114617
+    },
+    {
+      "asin": "B099V8GPR4",
+      "url": "https://www.amazon.com/dp/B099V8GPR4",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B099V8GPR4",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 113588
+    },
+    {
+      "asin": "B08YFJYD5Z",
+      "url": "https://www.amazon.com/dp/B08YFJYD5Z",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08YFJYD5Z",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 111318
+    },
+    {
+      "asin": "B09M3BZYVP",
+      "url": "https://www.amazon.com/dp/B09M3BZYVP",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B09M3BZYVP",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 104776
+    },
+    {
+      "asin": "B099W77VPG",
+      "url": "https://www.amazon.com/dp/B099W77VPG",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B099W77VPG",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 104531
+    },
+    {
+      "asin": "B07W36WN5X",
+      "url": "https://www.amazon.com/dp/B07W36WN5X",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B07W36WN5X",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 103235
+    },
+    {
+      "asin": "B094KDXPDJ",
+      "url": "https://www.amazon.com/dp/B094KDXPDJ",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B094KDXPDJ",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 102881
+    },
+    {
+      "asin": "B071R715MZ",
+      "url": "https://www.amazon.com/dp/B071R715MZ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B071R715MZ",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 102457
+    },
+    {
+      "asin": "B0BM2YG2K7",
+      "url": "https://www.amazon.com/dp/B0BM2YG2K7",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B0BM2YG2K7",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 101890
+    },
+    {
+      "asin": "B07WMB4XS4",
+      "url": "https://www.amazon.com/dp/B07WMB4XS4",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07WMB4XS4",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 94946
+    },
+    {
+      "asin": "B00DS4G2AW",
+      "url": "https://www.amazon.com/dp/B00DS4G2AW",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B00DS4G2AW",
+      "verdict": "live",
+      "category": "Electronics",
+      "review_count": 94803
+    },
+    {
+      "asin": "B07F4P3JH7",
+      "url": "https://www.amazon.com/dp/B07F4P3JH7",
+      "status": 206,
+      "final_url": "https://www.amazon.com/dp/B07F4P3JH7",
+      "verdict": "robot_check",
+      "category": "Electronics",
+      "review_count": 93242
     }
   ],
   "categories": [
-    "All_Beauty"
+    "All_Beauty",
+    "Musical_Instruments",
+    "Toys_and_Games",
+    "Electronics"
   ],
-  "n_per_cat": 5
+  "n_per_cat": 50
 }

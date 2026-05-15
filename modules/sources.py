@@ -239,3 +239,20 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
 
     _KEEPA_ASINS_CACHE[cache_key] = result
     return result
+
+
+# --------------------------------------------------------------------------
+# Local HF dataset index (free, offline) — preferred over Keepa when present
+# --------------------------------------------------------------------------
+def dataset_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
+    """Thin wrapper around :mod:`modules.dataset_lookup` so all real-ASIN
+    providers live behind a single namespace. ``None`` when the local
+    SQLite index isn't built or no category mapping matches.
+    """
+    from . import dataset_lookup
+    return dataset_lookup.top_asins(category, n=n)
+
+
+def dataset_available() -> bool:
+    from . import dataset_lookup
+    return dataset_lookup.db_available()
