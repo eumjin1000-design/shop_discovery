@@ -1,8 +1,54 @@
 {
-  "elapsed_sec": 3.2,
-  "results": [],
+  "elapsed_sec": 8.0,
+  "results": [
+    {
+      "asin": "B01LNT83KK",
+      "url": "https://www.amazon.com/dp/B01LNT83KK",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01LNT83KK",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 30206
+    },
+    {
+      "asin": "B07S141T2R",
+      "url": "https://www.amazon.com/dp/B07S141T2R",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B07S141T2R",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 27308
+    },
+    {
+      "asin": "B08CVJJ518",
+      "url": "https://www.amazon.com/dp/B08CVJJ518",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B08CVJJ518",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 16062
+    },
+    {
+      "asin": "B01MDTVZTZ",
+      "url": "https://www.amazon.com/dp/B01MDTVZTZ",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B01MDTVZTZ",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 15264
+    },
+    {
+      "asin": "B06VSX2B1S",
+      "url": "https://www.amazon.com/dp/B06VSX2B1S",
+      "status": 200,
+      "final_url": "https://www.amazon.com/dp/B06VSX2B1S",
+      "verdict": "live",
+      "category": "All_Beauty",
+      "review_count": 15185
+    }
+  ],
   "categories": [
     "All_Beauty"
   ],
-  "n_per_cat": 10
+  "n_per_cat": 5
 }

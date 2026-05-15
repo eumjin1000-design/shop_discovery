@@ -99,22 +99,41 @@ def top_n_metas(category: str, n: int) -> list[dict]:
 
 
 def head_check(asin: str, session: requests.Session) -> dict:
+    """Amazon rejects HEAD on /dp/ with 405, so we use GET with stream=True
+    and close before reading the body (only headers + status line consumed).
+    """
     url = f"https://www.amazon.com/dp/{asin}"
     out: dict = {"asin": asin, "url": url}
     try:
-        r = session.head(url, allow_redirects=True, timeout=HEAD_TIMEOUT,
-                         headers={"User-Agent": UA, "Accept-Language": "en-US"})
-        out["status"] = r.status_code
-        final = r.url or url
-        out["final_url"] = final
-        if r.status_code == 200 and "/dp/" in final:
-            out["verdict"] = "live"
-        elif r.status_code == 404:
+        with session.get(url, allow_redirects=True, timeout=HEAD_TIMEOUT,
+                         stream=True,
+                         headers={"User-Agent": UA,
+                                  "Accept-Language": "en-US",
+                                  "Range": "bytes=0-2047"}) as r:
+            out["status"] = r.status_code
+            final = r.url or url
+            out["final_url"] = final
+            # Sniff a small chunk of body to detect interstitials.
+            try:
+                head_bytes = next(r.iter_content(2048), b"") or b""
+            except Exception:
+                head_bytes = b""
+        body_low = head_bytes[:2048].decode("utf-8", "ignore").lower()
+        is_dog_404 = "the page you requested cannot be found" in body_low or \
+                     "we're sorry" in body_low and "dog" in body_low
+        is_captcha = "robot check" in body_low or "captcha" in body_low or \
+                     "/errors/validatecaptcha" in final.lower()
+
+        if r.status_code == 404:
             out["verdict"] = "dead_404"
-        elif "/errors/" in final or "robotcheck" in final.lower():
+        elif is_captcha or "/errors/" in final:
             out["verdict"] = "robot_check"
         elif "/ap/signin" in final:
             out["verdict"] = "signin_wall"
+        elif r.status_code in (200, 206) and "/dp/" in final and not is_dog_404:
+            out["verdict"] = "live"
+        elif r.status_code in (200, 206) and is_dog_404:
+            out["verdict"] = "dead_dog"  # Amazon's "404" returns 200+dog page
         elif r.status_code in (301, 302, 503):
             out["verdict"] = f"redirect_{r.status_code}"
         else:
@@ -174,7 +193,7 @@ def render_report(report: dict) -> str:
     for cat in cats:
         cat_rows = [r for r in rows if r["category"] == cat]
         live = sum(1 for r in cat_rows if r["verdict"] == "live")
-        dead = sum(1 for r in cat_rows if r["verdict"] == "dead_404")
+        dead = sum(1 for r in cat_rows if r["verdict"] in ("dead_404", "dead_dog"))
         bot = sum(1 for r in cat_rows if r["verdict"] == "robot_check")
         other = len(cat_rows) - live - dead - bot
         pct = (100.0 * live / len(cat_rows)) if cat_rows else 0.0
