@@ -7,3 +7,16 @@ analysis_history.json
 batch_results.json
 *.bak.json
 icon_preview.png
+
+# HuggingFace dataset cache + SQLite product index (multi-GB, built locally
+# via scripts/build_dataset_index.py). Streamlit Cloud operates without
+# them (LLM-only path + Spark broad URL mode still work).
+data/amazon_index.sqlite
+data/amazon_meta_*.parquet
+data/measurement.json
+data/production.json
+hf_cache/
+
+# Playwright + test artifacts
+.playwright-mcp/
+test_*.png

@@ -123,6 +123,15 @@ class SourcingRow:
         q = urllib.parse.quote_plus(f"{self.base_product} {self.variant}")
         return f"https://www.amazon.com/s?k={q}&s=review-count-rank"
 
+    @property
+    def search_url(self) -> str:
+        """Spark-native search URL — includes node + Prime + AFN filters
+        when :attr:`amazon_node_id` is set. See :mod:`modules.spark_urls`.
+        """
+        from .spark_urls import build_search_url
+        return build_search_url(self.keyword, self.brand,
+                                self.base_product, self.amazon_node_id)
+
 
 @dataclass(frozen=True)
 class SourcingResult:
@@ -136,10 +145,12 @@ class SourcingResult:
 
 
 def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
-                           n_variants: int = DEFAULT_VARIANTS) -> SourcingResult:
+                           n_variants: int = DEFAULT_VARIANTS,
+                           verify_urls: bool = False) -> SourcingResult:
     n_subs = max(1, int(n_subs))
     n_variants = max(1, min(len(_VARIANT_POOL), int(n_variants)))
-    spec = _normalize(_from_llm(category, n_subs), category, n_subs)
+    spec = _normalize(_from_llm(category, n_subs, verify_urls=verify_urls),
+                      category, n_subs)
     variants = _VARIANT_POOL[:n_variants]
     rng = seeded_rng("sourcing-price", category)
 
@@ -169,11 +180,12 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
                 ))
 
     total = len(rows)
-    summary = (
-        f"{category} 소싱 리스트 — {n_subs}개 서브카테고리 × {PRODUCTS_N}개 상품 "
-        f"× {n_variants}개 변형 = {total}개. Amazon URL은 브라우즈 노드 + Prime + "
-        "리뷰순(스크래퍼 수집용); brand는 추정, asin/review_count는 스크래퍼가 채울 플레이스홀더."
-    )
+    warn = ("" if any(r.asin for r in rows) else
+            " ⚠️ 이 카테고리는 데이터셋 미매핑이라 일반 검색 URL만 생성됩니다. "
+            "대량 수확은 페이지 하단 **🎯 대량 소싱 모드 → Spark 카테고리 URL**을 사용하세요.")
+    summary = (f"{category} 소싱 리스트 — {n_subs}개 서브카테고리 × {PRODUCTS_N}개 상품 "
+               f"× {n_variants}개 변형 = {total}개. Amazon URL은 브라우즈 노드 + "
+               "Prime + 리뷰순; brand 추정, asin/review_count는 스크래퍼 채움." + warn)
     return SourcingResult(category=category, rows=tuple(rows), n_subs=n_subs,
                           n_variants=n_variants, total=total, summary=summary)
 
@@ -197,15 +209,21 @@ USER_PROMPT = (
 )
 
 
-def _real_products_block(category: str, n_subs: int) -> str:
+def _real_products_block(category: str, n_subs: int,
+                         verify_urls: bool = False) -> str:
     """Pre-fetched real top sellers as a prompt block; ``""`` when no source
     is available. Tries the local HF dataset first (free, offline) and falls
-    back to Keepa (paid, live).
+    back to Keepa (paid, live). When ``verify_urls=True``, dataset rows are
+    HEAD-verified against amazon.com and dead ASINs are dropped first.
     """
     target = max(15, n_subs * PRODUCTS_N)
-    rows = (sources.dataset_top_asins(category, n=target)
-            or sources.keepa_top_asins(category, n=target)
-            or [])
+    rows = sources.dataset_top_asins(category, n=target)
+    if rows and verify_urls:
+        from . import dataset_verify
+        rows = dataset_verify.verify_asins(rows, max_check=min(30, len(rows)),
+                                           drop_dead=True)
+    if not rows:
+        rows = sources.keepa_top_asins(category, n=target) or []
     if not rows:
         return ""
     lines = [
@@ -218,11 +236,12 @@ def _real_products_block(category: str, n_subs: int) -> str:
             f"the most appropriate subcategory):\n" + "\n".join(lines) + "\n")
 
 
-def _from_llm(category: str, n_subs: int) -> list[dict] | None:
+def _from_llm(category: str, n_subs: int,
+              verify_urls: bool = False) -> list[dict] | None:
     prompt = USER_PROMPT.format(
         category=category, n_subs=n_subs, products_n=PRODUCTS_N,
         candidates=_get_node_candidates(category) or "(없음 — 빈 문자열로 두세요)",
-        real_block=_real_products_block(category, n_subs),
+        real_block=_real_products_block(category, n_subs, verify_urls),
     )
     data = ask_json(prompt, max_tokens=3500)
     if not isinstance(data, list):
@@ -240,23 +259,22 @@ def _from_llm(category: str, n_subs: int) -> list[dict] | None:
     return clean or None
 
 
+_FALLBACK_MODIFIERS = ("ideas", "set", "accessories", "decor", "for kids",
+                       "for adults", "essentials", "kit", "best", "premium")
+
+
 def _fallback_spec(category: str, n_subs: int) -> list[dict]:
-    base = [f"Compact {category}", f"Premium {category}", f"{category} Accessories",
-            f"Portable {category}", f"{category} for Travel", f"{category} Gift Sets",
-            f"{category} Bundles", f"{category} Essentials", f"Smart {category}",
-            f"{category} Refills"]
+    """LLM-failure fallback — emits ``"{cat} {modifier}"`` real searchable
+    keywords (not ``"Model 1/2/3"``). Variant fan-out still expands rows,
+    but they share ``search_url`` so the .txt-writer's dedup collapses them.
+    """
     out: list[dict] = []
     for i in range(n_subs):
-        name = base[i % len(base)]
-        if i >= len(base):
-            name = f"{name} #{i // len(base) + 1}"
-        out.append({
-            "subcategory": name, "amazon_node_id": "",
-            "products": [{"name": f"{name} Model {j}", "brand": "",
-                          "keyword": f"{name.lower()} {j}", "est_price": None,
-                          "asin": "", "review_count": 0}
-                         for j in range(1, PRODUCTS_N + 1)],
-        })
+        kw = f"{category} {_FALLBACK_MODIFIERS[i % len(_FALLBACK_MODIFIERS)]}".strip()
+        out.append({"subcategory": kw, "amazon_node_id": "", "products": [
+            {"name": kw, "brand": "", "keyword": kw.lower(),
+             "est_price": None, "asin": "", "review_count": 0}
+            for _ in range(PRODUCTS_N)]})
     return out
 
 
@@ -270,8 +288,8 @@ def _normalize(spec: list[dict] | None, category: str, n_subs: int) -> list[dict
         sub.setdefault("amazon_node_id", "")
         prods = list(sub.get("products", []))[:PRODUCTS_N]
         while len(prods) < PRODUCTS_N:
-            prods.append({"name": f"{sub['subcategory']} Item {len(prods) + 1}",
-                          "brand": "", "keyword": None, "est_price": None,
-                          "asin": "", "review_count": 0})
+            prods.append({"name": sub["subcategory"], "brand": "",
+                          "keyword": str(sub["subcategory"]).lower(),
+                          "est_price": None, "asin": "", "review_count": 0})
         sub["products"] = prods
     return spec

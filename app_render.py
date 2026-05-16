@@ -136,7 +136,7 @@ def scorecard_preview(result: PipelineResult) -> None:
         [{"항목": ko(line.name), "점수": round(line.score, 1), "만점": line.max_score,
           "달성률": f"{(line.score / line.max_score * 100 if line.max_score else 0):.0f}%",
           "설명": line.detail} for line in result.verdict.breakdown],
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
 
 
@@ -177,12 +177,12 @@ def render_batch(rows: list[dict]) -> None:
     styled = pd.DataFrame(table).style.apply(
         lambda x: [_ROW_BG.get(x["판정"], "")] * len(x), axis=1
     )
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width="stretch", hide_index=True)
 
     path = batch_report.write_batch_report(rows)
     st.download_button(
         "⬇️ 순위 결과 Excel 다운로드", data=Path(path).read_bytes(),
-        file_name=Path(path).name, key="batch_dl", use_container_width=True,
+        file_name=Path(path).name, key="batch_dl", width="stretch",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     st.caption(f"리포트는 `output/{Path(path).name}` 에도 저장되었습니다.")
@@ -240,17 +240,22 @@ def _sourcing_block(category: str) -> None:
     n_subs = c_sub.slider("서브카테고리 수", 2, 10, sourcing.DEFAULT_SUBS, key="src_subs")
     n_vars = c_var.slider("변형 수", 1, 10, sourcing.DEFAULT_VARIANTS, key="src_vars")
     st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
+    verify_urls = st.checkbox(
+        "🔍 URL 검증 (죽은 ASIN 제거, +30~45초)", value=False, key="src_verify",
+        help="HF dataset(2023-09 컷오프)의 ASIN을 amazon.com에 GET-stream 검증해 404/CAPTCHA를 LLM 프롬프트에서 제거. Electronics는 1.5초 간격 + 5초 재시도 적용.",
+    )
     if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
-        with st.spinner("소싱 리스트 생성 중..."):
-            res = sourcing.generate_sourcing_list(category, n_subs=n_subs, n_variants=n_vars)
+        with st.spinner("생성 + URL 검증 중..." if verify_urls else "소싱 리스트 생성 중..."):
+            res = sourcing.generate_sourcing_list(
+                category, n_subs=n_subs, n_variants=n_vars,
+                verify_urls=verify_urls)
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"),
             )
         st.session_state["sourcing_res"] = res
         st.session_state["sourcing_path"] = path
         st.session_state["sourcing_cat"] = category
-    res = (st.session_state.get("sourcing_res")
-           if st.session_state.get("sourcing_cat") == category else None)
+    res = st.session_state.get("sourcing_res") if st.session_state.get("sourcing_cat") == category else None
     if not res:
         return
     st.write(f"{res.summary}  ·  미리보기 (상위 20개)")
@@ -260,20 +265,22 @@ def _sourcing_block(category: str) -> None:
           "예상가격($)": r.est_price, "키워드": r.keyword, "ASIN": r.asin or "—",
           "리뷰수": r.review_count or "—"}
          for i, r in enumerate(res.rows[:20])],
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
+    with st.expander("📋 키워드만 복사 (우측 상단 아이콘)"):
+        st.code("\n".join(dict.fromkeys(r.keyword for r in res.rows if r.keyword)), language=None)
     path = st.session_state["sourcing_path"]
     txt_path = Path(path).with_suffix(".txt")
     d_xlsx, d_txt = st.columns(2)
     d_xlsx.download_button(
         "⬇️ Excel 다운로드", data=Path(path).read_bytes(),
-        file_name=Path(path).name, key="sourcing_dl", use_container_width=True,
+        file_name=Path(path).name, key="sourcing_dl", width="stretch",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     if txt_path.exists():
         d_txt.download_button(
             "⬇️ Spark 일괄입력 .txt", data=txt_path.read_bytes(),
-            file_name=txt_path.name, key="sourcing_txt_dl", use_container_width=True,
+            file_name=txt_path.name, key="sourcing_txt_dl", width="stretch",
             mime="text/plain",
         )
     st.caption(

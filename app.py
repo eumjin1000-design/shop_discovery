@@ -59,6 +59,27 @@ def _run_batch(names: list[str], label: str) -> None:
 
 # --------------------------------------------------------------------------
 st.set_page_config(page_title="샵 디스커버리", page_icon="🐙", layout="centered")
+
+# Custom red cursor (browser-only, 2x size). SVG data URI — works in all
+# modern browsers; OS-level cursor is unchanged.
+_ARROW = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' "
+          "width='64' height='64' viewBox='0 0 32 32'>"
+          "<path d='M3 2 L3 25 L9 19 L13 28 L17 27 L13 18 L21 18 Z' "
+          "fill='%23E50914' stroke='white' stroke-width='1.2'/></svg>")
+_HAND = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' "
+         "width='64' height='64' viewBox='0 0 32 32'>"
+         "<circle cx='16' cy='16' r='9' fill='%23E50914' stroke='white' "
+         "stroke-width='1.5'/><circle cx='16' cy='16' r='3' fill='white'/>"
+         "</svg>")
+st.markdown(
+    f"<style>*{{cursor:url(\"{_ARROW}\") 0 0,default;}} "
+    f"button,a,[role='button'],input[type='checkbox'],input[type='radio'],"
+    f"select,label{{cursor:url(\"{_HAND}\") 16 16,pointer !important;}} "
+    "input[type='text'],input[type='number'],textarea{cursor:text !important;}"
+    "</style>",
+    unsafe_allow_html=True,
+)
+
 ui.render_header(llm.provider_label(), llm.any_available())
 
 st.session_state.setdefault("category_input", "")
@@ -99,24 +120,24 @@ with st.expander(f"📋 카테고리 {_n}개 — 선정 기준 / 분석 이력 (
           "경쟁여유": "★" * c.competition,
           "분석": _dec_map.get(c.name) or "—", "선정 이유": c.reason}
          for c in _cats],
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
 
 # 3) Button row: 🎲 랜덤 추천 (outline, left)  ·  ▷ 전체 N개 자동 분석 (red, right)
 _b_left, _b_right = st.columns([1, 1])
-if _b_left.button("🎲 랜덤 추천", use_container_width=True, type="secondary", key="rand_pick"):
+if _b_left.button("🎲 랜덤 추천", width="stretch", type="secondary", key="rand_pick"):
     _rc = categories.random_category()
     st.session_state["category_input"] = _rc.name
     st.toast(f"🎲 추천: {_rc.name}")
     st.rerun()
-if _b_right.button(f"▷ 전체 {_n}개 자동 분석", use_container_width=True, type="primary", key="batch_all"):
+if _b_right.button(f"▷ 전체 {_n}개 자동 분석", width="stretch", type="primary", key="batch_all"):
     _run_batch([c.name for c in _cats], "전체")
 
 with st.expander("⏳ 10개 단위로 나눠 분석 (부분 배치)"):
     _chunks = [(i, min(i + 10, _n)) for i in range(0, _n, 10)]
     _ccols = st.columns(max(1, len(_chunks)))
     for _ci, (_a, _b) in enumerate(_chunks):
-        if _ccols[_ci].button(f"{_a + 1}~{_b}번", use_container_width=True, key=f"batch_{_a}"):
+        if _ccols[_ci].button(f"{_a + 1}~{_b}번", width="stretch", key=f"batch_{_a}"):
             _run_batch([c.name for c in _cats[_a:_b]], f"{_a + 1}~{_b}번")
 
 if st.session_state.get("batch_rows"):
@@ -131,7 +152,7 @@ with st.form("discovery"):
     market = col_a.text_input("타겟 시장", value="US")
     currency = col_b.text_input("통화", value="USD")
     force = col_c.checkbox("이미 분석한 카테고리도 다시 분석", value=False)
-    submitted = st.form_submit_button("🔍 분석 실행", use_container_width=True)
+    submitted = st.form_submit_button("🔍 분석 실행", width="stretch")
 
 if submitted:
     category = st.session_state["category_input"].strip()
@@ -175,8 +196,10 @@ if result is not None:
         st.dataframe(
             [{"키워드": k.term, "월 검색량(추정)": k.est_monthly_volume or "n/a",
               "근거": k.rationale} for k in result.keywords],
-            use_container_width=True, hide_index=True,
+            width="stretch", hide_index=True,
         )
+        st.caption("⬇️ 키워드만 한 번에 복사 (우측 상단 📋 아이콘 클릭)")
+        st.code("\n".join(k.term for k in result.keywords), language=None)
 
     with st.expander("모듈별 상세 지표"):
         t, b, rv, it, mg = result.trend, result.bsr, result.review, result.intent, result.margin
@@ -192,7 +215,7 @@ if result is not None:
     st.download_button(
         "⬇️ Excel 리포트 다운로드", data=data, file_name=fname,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )
     st.caption(f"리포트는 `output/{fname}` 에도 저장되었습니다.")
 
@@ -204,3 +227,6 @@ if result is not None:
         ui.render_go_tools(result)
     else:
         st.caption("ℹ️ 샵 이름·소싱 리스트 자동 생성은 GO 판정 카테고리에서 사용할 수 있습니다.")
+
+from app_bulk import render_bulk_sourcing_section  # noqa: E402
+render_bulk_sourcing_section()

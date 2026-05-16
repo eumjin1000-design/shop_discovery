@@ -11,12 +11,12 @@ Interface
 from __future__ import annotations
 
 import os
-from datetime import datetime
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
 from .report_gen import _DECISION_FILL, _HEADER_FILL, _HEADER_FONT  # reuse styles
+from .timez import stamp as kst_stamp
 
 
 def _header(ws, *labels: str) -> None:
@@ -59,7 +59,6 @@ def write_batch_report(rows: list[dict], out_dir: str = "output") -> str:
     ws.column_dimensions[chr(ord("E") + len(factor_names))].width = 80
     ws.freeze_panes = "A2"
 
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(out_dir, f"shop_discovery_batch_{stamp}.xlsx")
+    path = os.path.join(out_dir, f"shop_discovery_batch_{kst_stamp()}.xlsx")
     wb.save(path)
     return path

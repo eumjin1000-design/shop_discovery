@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -20,11 +19,13 @@ from openpyxl.styles import Alignment, Font, PatternFill
 
 from .report_gen import _HEADER_FILL, _HEADER_FONT
 from .sourcing import SourcingResult
+from .timez import stamp as kst_stamp
 
-_HEADERS = ["#", "서브카테고리", "브랜드(추정)", "상품명", "변형", "Amazon URL(노드·Prime·리뷰순)",
-            "예상가격(USD)", "키워드", "ASIN", "리뷰수", "노드ID"]
-_WIDTHS = {"A": 5, "B": 24, "C": 18, "D": 38, "E": 14, "F": 56, "G": 14, "H": 32,
-           "I": 14, "J": 10, "K": 14}
+_HEADERS = ["#", "서브카테고리", "브랜드(추정)", "상품명", "변형",
+            "Amazon URL(/dp/ 또는 노드)", "검색 확장 URL(Spark)", "예상가격(USD)",
+            "키워드", "ASIN", "리뷰수", "노드ID"]
+_WIDTHS = {"A": 5, "B": 24, "C": 18, "D": 38, "E": 14, "F": 56, "G": 56,
+           "H": 14, "I": 32, "J": 14, "K": 10, "L": 14}
 
 # "③ Spark 실수집" sheet (only when result.spark_rows is non-empty)
 _SPARK_FILL = PatternFill("solid", fgColor="C0001A")
@@ -109,11 +110,14 @@ def write_sourcing_report(result: SourcingResult, shop_name: str | None = None,
         url_cell = ws.cell(row=row, column=6, value=r.amazon_url)
         url_cell.hyperlink = r.amazon_url
         url_cell.style = "Hyperlink"
-        ws.cell(row=row, column=7, value=r.est_price)
-        ws.cell(row=row, column=8, value=r.keyword)
-        ws.cell(row=row, column=9, value=r.asin or "")
-        ws.cell(row=row, column=10, value=r.review_count or "")
-        ws.cell(row=row, column=11, value=r.amazon_node_id or "")
+        search_cell = ws.cell(row=row, column=7, value=r.search_url)
+        search_cell.hyperlink = r.search_url
+        search_cell.style = "Hyperlink"
+        ws.cell(row=row, column=8, value=r.est_price)
+        ws.cell(row=row, column=9, value=r.keyword)
+        ws.cell(row=row, column=10, value=r.asin or "")
+        ws.cell(row=row, column=11, value=r.review_count or "")
+        ws.cell(row=row, column=12, value=r.amazon_node_id or "")
 
     for col, width in _WIDTHS.items():
         ws.column_dimensions[col].width = width
@@ -123,15 +127,15 @@ def write_sourcing_report(result: SourcingResult, shop_name: str | None = None,
     _add_spark_sheet(wb, result)
 
     slug = re.sub(r"[^a-zA-Z0-9]+", "_", result.category).strip("_") or "category"
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(out_dir, f"sourcing_{slug}_{stamp}.xlsx")
+    path = os.path.join(out_dir, f"sourcing_{slug}_{kst_stamp()}.xlsx")
     wb.save(path)
 
-    # Spark bulk-input sidecar: unique "카테고리|서브카테고리|URL" lines.
+    # Spark bulk-input sidecar uses ``search_url`` (high-yield search pages),
+    # not the /dp/ amazon_url which Spark can't expand. Unique lines only.
     seen: set[str] = set()
     lines: list[str] = []
     for r in result.rows:
-        line = f"{result.category}|{r.subcategory}|{r.amazon_url}"
+        line = f"{result.category}|{r.subcategory}|{r.search_url}"
         if line not in seen:
             seen.add(line)
             lines.append(line)

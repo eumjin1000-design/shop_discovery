@@ -22,43 +22,7 @@ from typing import Optional
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "amazon_index.sqlite"
 
-# (keyword pattern -> HF dataset category). First match wins. Keywords are
-# matched case-insensitively against the user-typed category string.
-CATEGORY_MAP: list[tuple[str, str]] = [
-    # All_Beauty
-    ("skin", "All_Beauty"), ("beauty", "All_Beauty"), ("makeup", "All_Beauty"),
-    ("hair", "All_Beauty"), ("nail", "All_Beauty"), ("cosmetic", "All_Beauty"),
-    ("fragrance", "All_Beauty"), ("perfume", "All_Beauty"),
-    # Electronics
-    ("earbud", "Electronics"), ("headphone", "Electronics"),
-    ("speaker", "Electronics"), ("camera", "Electronics"),
-    ("tv", "Electronics"), ("monitor", "Electronics"), ("laptop", "Electronics"),
-    ("electronic", "Electronics"), ("charger", "Electronics"),
-    ("cable", "Electronics"), ("battery", "Electronics"),
-    ("phone", "Electronics"), ("tablet", "Electronics"),
-    # Toys_and_Games
-    ("toy", "Toys_and_Games"), ("game", "Toys_and_Games"),
-    ("puzzle", "Toys_and_Games"), ("doll", "Toys_and_Games"),
-    ("lego", "Toys_and_Games"), ("board game", "Toys_and_Games"),
-    ("children", "Toys_and_Games"), ("kids", "Toys_and_Games"),
-    # Musical_Instruments
-    ("guitar", "Musical_Instruments"), ("music", "Musical_Instruments"),
-    ("piano", "Musical_Instruments"), ("drum", "Musical_Instruments"),
-    ("microphone", "Musical_Instruments"), ("instrument", "Musical_Instruments"),
-    # Industrial_and_Scientific
-    ("industrial", "Industrial_and_Scientific"),
-    ("scientific", "Industrial_and_Scientific"),
-    ("lab", "Industrial_and_Scientific"),
-    # Arts_Crafts_and_Sewing
-    ("craft", "Arts_Crafts_and_Sewing"), ("sewing", "Arts_Crafts_and_Sewing"),
-    ("paint", "Arts_Crafts_and_Sewing"), ("art ", "Arts_Crafts_and_Sewing"),
-    # Cell_Phones_and_Accessories
-    ("cell phone", "Cell_Phones_and_Accessories"),
-    ("phone case", "Cell_Phones_and_Accessories"),
-    ("phone accessory", "Cell_Phones_and_Accessories"),
-    # Handmade_Products
-    ("handmade", "Handmade_Products"), ("handcraft", "Handmade_Products"),
-]
+from .dataset_categories import CATEGORY_MAP
 
 
 def db_available() -> bool:
@@ -76,6 +40,38 @@ def map_category(user_category: str) -> Optional[str]:
     return None
 
 
+def top_asins_direct(hf_category: str, n: int = 1000) -> Optional[list[dict]]:
+    """Lookup by exact HF dataset category name — no keyword filter.
+
+    Used by :mod:`modules.bulk_sourcing` when the caller already knows the
+    target HF category (e.g. ``"Pet_Supplies"``) and wants raw top-N by
+    review count, not a query-narrowed subset.
+    """
+    if not db_available():
+        return None
+    con = sqlite3.connect(DB_PATH)
+    try:
+        rows = con.execute(
+            "SELECT asin, title, brand, price, avg_rating, review_count "
+            "FROM products WHERE category = ? "
+            "ORDER BY review_count DESC LIMIT ?",
+            (hf_category, int(n)),
+        ).fetchall()
+    finally:
+        con.close()
+    if not rows:
+        return None
+    return [{
+        "asin": r[0],
+        "title": r[1] or "",
+        "brand": r[2] or "",
+        "est_price": float(r[3]) if r[3] is not None else None,
+        "rating": float(r[4]) if r[4] is not None else None,
+        "review_count": int(r[5] or 0),
+        "_dataset_category": hf_category,
+    } for r in rows]
+
+
 def list_categories() -> list[str]:
     if not db_available():
         return []
@@ -87,8 +83,50 @@ def list_categories() -> list[str]:
         con.close()
 
 
+_STOP_WORDS = {"the", "and", "for", "with", "from", "this", "that", "best",
+               "new", "top", "set", "pack", "size", "small", "large"}
+
+
+def _query_words(text: str) -> list[str]:
+    """Content words 3+ chars; strip trailing 's' to match singular/plural."""
+    out: list[str] = []
+    for w in re.findall(r"[a-z]{3,}", text.lower()):
+        if w in _STOP_WORDS:
+            continue
+        out.append(w[:-1] if w.endswith("s") and len(w) > 4 else w)
+    seen: set[str] = set()
+    return [w for w in out if not (w in seen or seen.add(w))]
+
+
+def _select_with_filter(con: sqlite3.Connection, mapped: str,
+                        words: list[str], n: int) -> list[tuple]:
+    """Top-N rows where title matches ALL ``words`` (LIKE %word%). When the
+    filtered query yields nothing, fall back to ANY-match, then to category
+    only. Returns the first non-empty result tier.
+    """
+    base = ("SELECT asin, title, brand, price, avg_rating, review_count "
+            "FROM products WHERE category = ?")
+    order = " ORDER BY review_count DESC LIMIT ?"
+
+    if words:
+        likes_all = " AND " + " AND ".join("LOWER(title) LIKE ?" for _ in words)
+        params = [mapped, *[f"%{w}%" for w in words], int(n)]
+        rows = con.execute(base + likes_all + order, params).fetchall()
+        if rows:
+            return rows
+        likes_any = " AND (" + " OR ".join("LOWER(title) LIKE ?"
+                                           for _ in words) + ")"
+        rows = con.execute(base + likes_any + order, params).fetchall()
+        if rows:
+            return rows
+    return con.execute(base + order, (mapped, int(n))).fetchall()
+
+
 def top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
-    """Top-N ASINs in the mapped category by ``review_count``.
+    """Top-N ASINs in the mapped category, narrowed by keywords from
+    ``category`` (e.g. "wireless earbuds" → Electronics + title contains
+    'wireless' and 'earbud'). Falls back to broader matches when the
+    strictest filter is empty.
 
     ``None`` when the index isn't built or no category mapping matches.
     """
@@ -97,20 +135,15 @@ def top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
     mapped = map_category(category)
     if not mapped:
         return None
+    words = _query_words(category)
     con = sqlite3.connect(DB_PATH)
     try:
-        cur = con.execute(
-            "SELECT asin, title, brand, price, avg_rating, review_count "
-            "FROM products WHERE category = ? "
-            "ORDER BY review_count DESC LIMIT ?",
-            (mapped, int(n)),
-        )
-        rows = cur.fetchall()
+        rows = _select_with_filter(con, mapped, words, int(n))
     finally:
         con.close()
     if not rows:
         return None
-    out = [{
+    return [{
         "asin": r[0],
         "title": r[1] or "",
         "brand": r[2] or "",
@@ -119,4 +152,3 @@ def top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
         "review_count": int(r[5] or 0),
         "_dataset_category": mapped,
     } for r in rows]
-    return out

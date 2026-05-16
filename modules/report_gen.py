@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from .models import PipelineResult
+from .timez import stamp as kst_stamp
 
 _HEADER_FILL = PatternFill("solid", fgColor="1F4E78")
 _HEADER_FONT = Font(bold=True, color="FFFFFF")
@@ -41,8 +41,7 @@ def write_report(result: PipelineResult, out_dir: str = "output") -> str:
     _details_sheet(wb.create_sheet("Details"), result)
 
     slug = re.sub(r"[^a-zA-Z0-9]+", "_", result.request.category).strip("_") or "category"
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(out_dir, f"shop_discovery_{slug}_{stamp}.xlsx")
+    path = os.path.join(out_dir, f"shop_discovery_{slug}_{kst_stamp()}.xlsx")
     wb.save(path)
     return path
 

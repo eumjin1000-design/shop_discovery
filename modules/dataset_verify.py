@@ -68,20 +68,25 @@ def _probe(asin: str, session: requests.Session) -> str:
 def verify_asins(rows: list[dict], *, max_check: int = 30,
                  drop_dead: bool = True,
                  progress: Optional[callable] = None) -> list[dict]:
+    """Circuit breaker: if 5 of the last 6 probes are ``robot_check`` our IP
+    is flagged — stop verifying and pass remaining rows through unchecked,
+    otherwise the verify step keeps poisoning subsequent requests.
+    """
     if not rows:
         return rows
     session = requests.Session()
     checked = 0
+    recent_bots: list[bool] = []  # rolling window for circuit breaker
+    tripped = False
     out: list[dict] = []
     for row in rows:
-        if checked >= max_check:
-            row = {**row, "verify_status": "unchecked"}
-            out.append(row)
+        if tripped or checked >= max_check:
+            out.append({**row, "verify_status":
+                        "ip_flagged" if tripped else "unchecked"})
             continue
         asin = (row.get("asin") or "").strip().upper()
         if len(asin) != 10:
-            row = {**row, "verify_status": "unchecked"}
-            out.append(row)
+            out.append({**row, "verify_status": "unchecked"})
             continue
 
         ds_cat = row.get("_dataset_category", "")
@@ -95,6 +100,11 @@ def verify_asins(rows: list[dict], *, max_check: int = 30,
         if not (drop_dead and status == "dead"):
             out.append(annotated)
         checked += 1
+        recent_bots.append(status == "robot_check")
+        if len(recent_bots) > 6:
+            recent_bots.pop(0)
+        if len(recent_bots) >= 6 and sum(recent_bots) >= 5:
+            tripped = True  # IP is flagged — abandon further verification
         if progress:
             try:
                 progress(checked, max_check, asin, status)

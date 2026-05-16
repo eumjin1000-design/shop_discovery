@@ -83,7 +83,7 @@ def render_list_header() -> None:
         "<div style='font-size:19px;font-weight:700;padding-top:6px'>📂 카테고리 목록</div>",
         unsafe_allow_html=True,
     )
-    if c_restore.button("↩ 이전 목록 복원", use_container_width=True, type="secondary",
+    if c_restore.button("↩ 이전 목록 복원", width="stretch", type="secondary",
                         disabled=not categories.has_backup()):
         if categories.restore_previous_list():
             st.session_state.pop("batch_rows", None)
@@ -92,7 +92,7 @@ def render_list_header() -> None:
             st.rerun()
         else:
             st.warning("복원할 백업이 없습니다.", icon="⚠️")
-    if c_new.button("✨ AI 새목록", use_container_width=True, type="secondary"):
+    if c_new.button("✨ AI 새목록", width="stretch", type="secondary"):
         if not llm.any_available():
             st.warning("LLM API 키가 필요합니다 (GOOGLE_API_KEY 또는 ANTHROPIC_API_KEY).", icon="⚠️")
         else:
@@ -125,6 +125,6 @@ def render_category_grid(cats, decisions: dict[str, str | None], selected: str, 
                                        decisions.get(cat.name), is_sel),
                             unsafe_allow_html=True)
                 if st.button("✓ 선택됨" if is_sel else "선택", key=f"pick::{cat.name}",
-                             use_container_width=True, type="secondary"):
+                             width="stretch", type="secondary"):
                     st.session_state["category_input"] = cat.name
                     st.rerun()

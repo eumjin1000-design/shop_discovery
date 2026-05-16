@@ -29,7 +29,7 @@ def render_spark_import_section(category: str) -> None:
         "Spark CSV 업로드", type=["csv"], key="spark_csv",
         help="헤더: 상품명·상품코드·가격·별점·리뷰수·판매순위·상태 (UTF-8 / CP949)",
     )
-    if up is not None and st.button("📥 CSV 병합", key="spark_merge", use_container_width=True):
+    if up is not None and st.button("📥 CSV 병합", key="spark_merge", width="stretch"):
         tmp = ""
         try:
             with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tf:
@@ -62,5 +62,5 @@ def render_spark_import_section(category: str) -> None:
               "마진율": r.get("margin_rate"), "별점": r.get("rating"),
               "리뷰수": r.get("review_count"), "판매순위": r.get("sales_rank")}
              for r in res.spark_rows[:20]],
-            use_container_width=True, hide_index=True,
+            width="stretch", hide_index=True,
         )
