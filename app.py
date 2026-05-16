@@ -226,6 +226,9 @@ if result is not None:
     st.divider()
     if v.decision == "GO":
         ui.render_go_tools(result)
+        from app_targeted_spark import render_targeted_spark_section  # noqa: E402
+        st.divider()
+        render_targeted_spark_section(result.request.category)
     else:
         st.caption("ℹ️ 샵 이름·소싱 리스트 자동 생성은 GO 판정 카테고리에서 사용할 수 있습니다.")
 
