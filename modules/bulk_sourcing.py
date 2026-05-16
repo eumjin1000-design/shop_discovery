@@ -133,7 +133,8 @@ def spark_query_list(query: str, n_variations: int = 8,
     decor, ...). Adds ~10~26 URLs depending on category size, pushing total
     yield toward 5만+ ASIN target.
     """
-    q = (query or "").strip()
+    import re as _re
+    q = _re.sub(r"\s*\([^)]*\)", "", query or "").strip()
     if not q:
         return SourcingResult(category="(empty query)", rows=(), n_subs=0,
                               n_variants=0, total=0,
