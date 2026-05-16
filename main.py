@@ -42,7 +42,14 @@ from modules.models import DiscoveryRequest, PipelineResult
 
 
 def run_pipeline(category: str, *, target_market: str = "US", currency: str = "USD") -> PipelineResult:
-    """Run the full discovery pipeline for ``category`` and return the result."""
+    """Run the full discovery pipeline for ``category`` and return the result.
+
+    Strips ``(annotation)`` from category at the entry point so all downstream
+    consumers (DiscoveryRequest → Verdict → GUI subheader → report filename
+    → LLM verdict prompt) see the clean form. Single-point normalization.
+    """
+    from modules.sourcing import _strip_annotation
+    category = _strip_annotation(category)
     request = DiscoveryRequest(category=category, target_market=target_market, currency=currency)
 
     keywords = keyword_gen.generate_keywords(request)
