@@ -4,6 +4,8 @@ selection flows through ``st.session_state["category_input"]``.
 """
 from __future__ import annotations
 
+import re
+
 import streamlit as st
 
 from modules import categories, llm
@@ -50,6 +52,11 @@ def _card_html(cat, emoji: str, decision: str | None, selected: bool) -> str:
     border = "2px solid #1967d2" if selected else "1px solid #e3e3e3"
     bg = "#eef4fe" if selected else "#ffffff"
     shadow = "0 3px 10px rgba(25,103,210,.18)" if selected else "0 1px 3px rgba(0,0,0,.05)"
+    age_badge = (
+        f'<div style="font-size:11px;color:#1967d2;background:#eef4fe;'
+        f'border-radius:10px;padding:1px 8px;display:inline-block;margin-top:4px">'
+        f'🎯 {getattr(cat, "age", "")}</div>' if getattr(cat, "age", "") else ""
+    )
     return (
         f'<div style="border:{border};background:{bg};border-radius:14px;padding:13px 14px 10px;'
         f'box-shadow:{shadow};min-height:152px">'
@@ -58,6 +65,7 @@ def _card_html(cat, emoji: str, decision: str | None, selected: bool) -> str:
         f'<div style="font-weight:700;font-size:13.5px;line-height:1.3;text-align:center;min-height:34px">{cat.name}</div>'
         f'<div style="font-size:12px;color:#666;text-align:center;margin-top:6px">'
         f'마진 {_stars(cat.margin)}&nbsp;&nbsp;·&nbsp;&nbsp;수요 {_stars(cat.demand)}</div>'
+        f'<div style="text-align:center">{age_badge}</div>'
         f'</div>'
     )
 
@@ -96,16 +104,28 @@ def render_list_header() -> None:
         if not llm.any_available():
             st.warning("LLM API 키가 필요합니다 (GOOGLE_API_KEY 또는 ANTHROPIC_API_KEY).", icon="⚠️")
         else:
-            with st.spinner("AI(Gemini Flash 우선)로 새 트렌딩 카테고리 20개 생성 중..."):
-                gen = categories.generate_new_categories(20, replace=True)
+            target_age = st.session_state.get("ai_target_age", "")
+            label = f" (타겟 연령 {target_age})" if target_age else ""
+            with st.spinner(f"AI(Claude 우선)로 새 트렌딩 카테고리 20개 생성{label}..."):
+                gen = categories.generate_new_categories(
+                    20, replace=True, target_age=target_age)
             if gen:
                 st.session_state.pop("batch_rows", None)
                 st.session_state.pop("result", None)
                 st.session_state["category_input"] = ""
-                st.toast(f"✨ 새 목록 {len(gen)}개 생성 — 기존 분석 초기화, 백업 저장 완료")
+                st.toast(f"✨ 새 목록 {len(gen)}개 생성{label} — 백업 저장 완료")
                 st.rerun()
             else:
                 st.warning("새 카테고리를 받지 못했습니다. 잠시 후 다시 시도하세요.", icon="⚠️")
+    # Age targeting selector — checked = 40-60 (americans-spend niche)
+    age_opts = ["전체 (제한 없음)", "18-24 Gen Z", "25-34 Millennials",
+                "35-44", "40-60 (가격 저항 낮음)", "55+ Boomer"]
+    age_pick = st.selectbox("🎯 카테고리 선정 기준 (타겟 연령)", age_opts,
+                             index=0, key="ai_age_selectbox",
+                             help="선택 시 AI 새목록이 해당 연령대가 주 구매층인 niche만 생성")
+    # Parse the picked label into the range token used by the LLM prompt
+    m = re.search(r"(\d{2}[-+]\d{2}|\d{2}\+)", age_pick or "")
+    st.session_state["ai_target_age"] = m.group(1) if m else ""
     st.markdown(
         "<div style='background:#fff8e1;border:1px solid #ffe082;border-radius:8px;"
         "padding:8px 12px;color:#8d6e00;font-size:13px;margin:8px 0 12px'>"
