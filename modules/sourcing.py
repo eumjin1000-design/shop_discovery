@@ -267,13 +267,12 @@ _FALLBACK_MODIFIERS = ("ideas", "set", "accessories", "decor", "for kids",
 
 
 def _fallback_spec(category: str, n_subs: int) -> list[dict]:
-    """LLM-failure fallback — emits ``"{cat} {modifier}"`` real searchable
-    keywords (not ``"Model 1/2/3"``). Variant fan-out still expands rows,
-    but they share ``search_url`` so the .txt-writer's dedup collapses them.
-    """
+    """LLM-failure fallback — ``"{cat} {modifier}"`` real searchable keywords.
+    Strips ``(annotation)`` so CURATED names display + search cleanly."""
+    cat = _strip_annotation(category)
     out: list[dict] = []
     for i in range(n_subs):
-        kw = f"{category} {_FALLBACK_MODIFIERS[i % len(_FALLBACK_MODIFIERS)]}".strip()
+        kw = f"{cat} {_FALLBACK_MODIFIERS[i % len(_FALLBACK_MODIFIERS)]}".strip()
         out.append({"subcategory": kw, "amazon_node_id": "", "products": [
             {"name": kw, "brand": "", "keyword": kw.lower(),
              "est_price": None, "asin": "", "review_count": 0}
