@@ -113,25 +113,31 @@ def bulk_sourcing_list(categories: list[str],
     )
 
 
-_QUERY_MODIFIERS = ("", "ideas", "set", "kit", "accessories", "for kids",
-                    "for adults", "decor", "essentials", "best", "premium",
-                    "with storage")
+# SEO-friendly modifiers (replaced legacy "ideas/decor/for kids" which
+# misfit niche categories like compression socks, wine accessories). Used
+# only when n_variations exceeds the base 1 — first slot is always the raw
+# query, then SEO-friendly anchors that preserve niche specificity.
+_QUERY_MODIFIERS = ("", "best", "top rated", "premium", "amazon best seller",
+                    "review", "popular", "set", "kit", "2026", "deal",
+                    "bestseller", "highly rated", "trending", "for women",
+                    "for men", "gift", "professional", "compact", "portable")
 
 
 def spark_query_list(query: str, n_variations: int = 8,
-                     include_broad: bool = False) -> SourcingResult:
+                     include_broad: bool = False,
+                     pages: int = 1) -> SourcingResult:
     """Spark URLs for a single user-typed query (e.g. ``"reading nook"``).
 
     Routes ``query`` through :func:`modules.dataset_lookup.map_category` to
     find the matching HF dataset category and its Amazon browse node, then
     emits ``n_variations`` keyword variations of the query — each becomes
-    one Spark search URL focused on **this one niche**.
+    one Spark search URL focused on **this one niche**. ``pages>=2``
+    multiplies that by expanding each into N paginated URLs.
 
     When ``include_broad=True``, also appends the mapped HF category's full
     ``HF_BROAD_KEYWORDS`` set — covers the niche's adjacent ecosystem (e.g.
     "reading nook" → Home_and_Kitchen broad: kitchen, bedding, lighting,
-    decor, ...). Adds ~10~26 URLs depending on category size, pushing total
-    yield toward 5만+ ASIN target.
+    decor, ...). Adds ~10~26 URLs depending on category size.
     """
     import re as _re
     q = _re.sub(r"\s*\([^)]*\)", "", query or "").strip()
@@ -141,7 +147,8 @@ def spark_query_list(query: str, n_variations: int = 8,
                               summary="키워드를 입력하세요.")
     hf_cat = dataset_lookup.map_category(q)
     node = spark_urls.HF_TO_BROWSE_NODE.get(hf_cat or "", "")
-    n = max(3, min(int(n_variations), len(_QUERY_MODIFIERS)))
+    n = max(1, min(int(n_variations), len(_QUERY_MODIFIERS)))
+    pages = max(1, int(pages))
     rows: list[SourcingRow] = []
     seen_kws: set[str] = set()
     for mod in _QUERY_MODIFIERS[:n]:
@@ -149,29 +156,32 @@ def spark_query_list(query: str, n_variations: int = 8,
         if kw.lower() in seen_kws:
             continue
         seen_kws.add(kw.lower())
-        rows.append(SourcingRow(
-            subcategory=q, base_product=kw, variant="", brand="",
-            keyword=kw, est_price=0.0,
-            amazon_node_id=node, asin="", review_count=0,
-        ))
+        for page in range(1, pages + 1):
+            rows.append(SourcingRow(
+                subcategory=q, base_product=kw, variant="", brand="",
+                keyword=kw, est_price=0.0,
+                amazon_node_id=node, asin="", review_count=0, page=page,
+            ))
     n_variations_rows = len(rows)
     if include_broad and hf_cat:
         for kw in spark_urls.HF_BROAD_KEYWORDS.get(hf_cat, []):
             if kw.lower() in seen_kws:
                 continue
             seen_kws.add(kw.lower())
-            rows.append(SourcingRow(
-                subcategory=f"{hf_cat} (브로드)", base_product=kw, variant="",
-                brand="", keyword=kw, est_price=0.0,
-                amazon_node_id=node, asin="", review_count=0,
-            ))
+            for page in range(1, pages + 1):
+                rows.append(SourcingRow(
+                    subcategory=f"{hf_cat} (브로드)", base_product=kw,
+                    variant="", brand="", keyword=kw, est_price=0.0,
+                    amazon_node_id=node, asin="", review_count=0, page=page,
+                ))
     broad_added = len(rows) - n_variations_rows
+    page_note = f" × {pages}페이지" if pages > 1 else ""
     summary = (
-        f"'{q}' 타겟 Spark URL — {n_variations_rows}개 키워드 변형"
-        f"{f' + {broad_added}개 {hf_cat} 브로드 키워드' if broad_added else ''} "
-        f"= 총 {len(rows)}개. "
+        f"'{q}' 타겟 Spark URL — {n_variations_rows // pages}개 키워드 변형"
+        f"{f' + {broad_added // pages}개 {hf_cat} 브로드' if broad_added else ''}"
+        f"{page_note} = 총 **{len(rows)}개** URL. "
         f"매핑 HF: {hf_cat or '미매핑'}, 노드: {node or 'n/a'}. "
-        f"예상 수확: ~{len(rows) * 900:,} 상품 (URL당 ~900)."
+        f"예상 수확: ~{len(rows) * 60:,}+ 상품 (URL당 ~60)."
     )
     return SourcingResult(
         category=f"Spark targeted: {q}", rows=tuple(rows),

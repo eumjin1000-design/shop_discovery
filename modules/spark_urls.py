@@ -154,7 +154,7 @@ HF_BROAD_KEYWORDS: dict[str, list[str]] = {
 
 
 def build_search_url(keyword: str, brand: str = "", base_product: str = "",
-                     node_id: str = "") -> str:
+                     node_id: str = "", page: int = 1) -> str:
     """Amazon search URL — Spark-native when ``node_id`` is set.
 
     Logic:
@@ -166,6 +166,10 @@ def build_search_url(keyword: str, brand: str = "", base_product: str = "",
       3. When ``node_id`` is a real node, emit a guide-format URL
          (``keywords=...&rh=n%3A...,AFN,Prime&c=ts``).
       4. Otherwise fall back to a basic ``s?k=...`` keyword search.
+      5. ``page=N`` (N>=2) appends ``&page=N`` so the system itself can
+         pre-expand a single keyword into multiple paginated URLs — Spark
+         just visits each, no per-URL pagination config needed. Page 1
+         emits no suffix (Amazon's default).
     """
     kw = re.sub(r"\s*\([^)]*\)", "", keyword or "").strip()
     if len(kw) < 4:
@@ -176,8 +180,9 @@ def build_search_url(keyword: str, brand: str = "", base_product: str = "",
         kw = " ".join(([brand.strip()] if brand else []) + ws) or "amazon"
     q = urllib.parse.quote_plus(kw)
     n = (node_id or "").strip()
+    page_suffix = f"&page={int(page)}" if int(page or 1) >= 2 else ""
     if n and n != _NODE_NONE:
         rh = f"n%3A{n}%2C{AFN_FILTER}%2C{PRIME_FILTER}"
         return (f"https://www.amazon.com/s?keywords={q}&rh={rh}"
-                "&c=ts&s=review-count-rank")
-    return f"https://www.amazon.com/s?k={q}&s=review-count-rank"
+                f"&c=ts&s=review-count-rank{page_suffix}")
+    return f"https://www.amazon.com/s?k={q}&s=review-count-rank{page_suffix}"
