@@ -12,9 +12,27 @@ A value that is empty or still the .env placeholder ("여기에...") counts as
 """
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import statistics
-from typing import Optional
+from typing import Callable, Optional, TypeVar
+
+_T = TypeVar("_T")
+KEEPA_TIMEOUT_SEC = 10.0  # Streamlit Cloud often sees Keepa hang — abort fast.
+
+
+def _with_timeout(fn: Callable[[], _T], timeout: float = KEEPA_TIMEOUT_SEC) -> Optional[_T]:
+    """Run ``fn()`` with hard timeout; returns ``None`` on timeout/error.
+
+    The Keepa SDK has no native timeout; on Streamlit Cloud calls sometimes
+    hang for minutes. We run the call in a worker thread and cancel reading
+    after ``timeout`` seconds. The hung thread eventually dies on its own.
+    """
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            return ex.submit(fn).result(timeout=timeout)
+    except (concurrent.futures.TimeoutError, Exception):
+        return None
 
 # Per-process caches so a pipeline run hits each provider at most once per key.
 _KW_CACHE: dict[tuple[str, ...], Optional[dict]] = {}
@@ -183,7 +201,8 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
     """Top-N best-selling ASINs in ``category`` with real brand/price/reviews.
 
     One Keepa round-trip (~50 tokens for best_sellers_query + 1 per ASIN).
-    Cached per ``(category, n)``. Returns ``None`` on any failure.
+    Cached per ``(category, n)``. Returns ``None`` on any failure OR timeout
+    (10s — Streamlit Cloud sometimes sees Keepa hang indefinitely).
     """
     key = _env("KEEPA_API_KEY")
     if not key:
@@ -192,8 +211,7 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
     if cache_key in _KEEPA_ASINS_CACHE:
         return _KEEPA_ASINS_CACHE[cache_key]
 
-    result: Optional[list[dict]] = None
-    try:
+    def _do_call() -> Optional[list[dict]]:
         import keepa
 
         api = keepa.Keepa(key)
@@ -233,10 +251,9 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
                 "rating": rating,
                 "review_count": reviews,
             })
-        result = out or None
-    except Exception:
-        result = None
+        return out or None
 
+    result = _with_timeout(_do_call)
     _KEEPA_ASINS_CACHE[cache_key] = result
     return result
 
