@@ -25,14 +25,17 @@ def _with_timeout(fn: Callable[[], _T], timeout: float = KEEPA_TIMEOUT_SEC) -> O
     """Run ``fn()`` with hard timeout; returns ``None`` on timeout/error.
 
     The Keepa SDK has no native timeout; on Streamlit Cloud calls sometimes
-    hang for minutes. We run the call in a worker thread and cancel reading
-    after ``timeout`` seconds. The hung thread eventually dies on its own.
+    hang for minutes. We run the call in a worker thread, stop waiting after
+    ``timeout`` seconds, and detach the executor (``shutdown(wait=False)``)
+    so the caller is never blocked by a hung Keepa thread.
     """
+    ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-            return ex.submit(fn).result(timeout=timeout)
+        return ex.submit(fn).result(timeout=timeout)
     except (concurrent.futures.TimeoutError, Exception):
         return None
+    finally:
+        ex.shutdown(wait=False)
 
 # Per-process caches so a pipeline run hits each provider at most once per key.
 _KW_CACHE: dict[tuple[str, ...], Optional[dict]] = {}
