@@ -150,6 +150,7 @@ class SourcingResult:
 def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
                            n_variants: int = DEFAULT_VARIANTS,
                            verify_urls: bool = False) -> SourcingResult:
+    category = _strip_annotation(category)  # clean display + filename + URL
     n_subs = max(1, int(n_subs))
     n_variants = max(1, min(len(_VARIANT_POOL), int(n_variants)))
     spec = _normalize(_from_llm(category, n_subs, verify_urls=verify_urls),
