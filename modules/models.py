@@ -86,6 +86,11 @@ class IntentResult:
     problem_awareness: float
     sample_queries: tuple[str, ...] = ()
     notes: str = ""
+    # LLM-estimated dominant buyer age range (e.g. "25-34"); empty if not
+    # estimated. Used by app/Excel to surface demographic targeting hint.
+    primary_age: str = ""
+    secondary_age: str = ""
+    age_rationale: str = ""
 
 
 @dataclass(frozen=True)

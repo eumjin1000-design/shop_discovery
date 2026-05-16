@@ -189,6 +189,13 @@ if result is not None:
         if st.session_state.get("ai_summary"):
             st.info(st.session_state["ai_summary"], icon="🤖")
 
+    # Buyer demographic (LLM-estimated, from intent_check pass)
+    it = result.intent
+    if it.primary_age or it.secondary_age:
+        ages = [a for a in (it.primary_age, it.secondary_age) if a]
+        st.markdown(f"**🎯 주 구매 연령대** · {' / '.join(ages)}"
+                    f"{' — ' + it.age_rationale if it.age_rationale else ''}")
+
     st.subheader("스코어카드 (100점)")
     for line in v.breakdown:
         ui.factor_bar(ui.ko(line.name), line.score, line.max_score, line.detail)

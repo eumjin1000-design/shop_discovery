@@ -30,12 +30,15 @@ def check_intent(category: str, keywords: tuple[Keyword, ...]) -> IntentResult:
 def _from_llm(category: str, keywords: tuple[Keyword, ...]) -> IntentResult | None:
     terms = ", ".join(kw.term for kw in keywords)
     prompt = (
-        f'Audience research for the category "{category}". Given these search '
-        f"terms: {terms}\nEstimate two ratios in 0..1: commercial_intent "
-        "(share of terms from people ready to buy) and problem_awareness "
-        "(share from people actively seeking a solution). Also give 3 example "
-        'high-intent queries. Return ONLY JSON: {"commercial_intent": x, '
-        '"problem_awareness": y, "sample_queries": ["...", "...", "..."]}.'
+        f'Audience research for "{category}" on US Amazon. Search terms: '
+        f"{terms}\nEstimate: commercial_intent 0..1 (share ready-to-buy), "
+        "problem_awareness 0..1 (share actively seeking solution), 3 high-"
+        "intent example queries, AND dominant US buyer age range "
+        '("18-24"|"25-34"|"35-44"|"45-54"|"55-64"|"65+") with one-sentence '
+        'rationale. Return ONLY JSON: {"commercial_intent": x, '
+        '"problem_awareness": y, "sample_queries": ["...","...","..."], '
+        '"primary_age": "25-34", "secondary_age": "35-44", '
+        '"age_rationale": "..."}.'
     )
     data = ask_json(prompt)
     if not isinstance(data, dict):
@@ -53,6 +56,9 @@ def _from_llm(category: str, keywords: tuple[Keyword, ...]) -> IntentResult | No
         problem_awareness=round(pa, 3),
         sample_queries=samples,
         notes="Intent estimated via LLM.",
+        primary_age=str(data.get("primary_age", "")).strip()[:20],
+        secondary_age=str(data.get("secondary_age", "")).strip()[:20],
+        age_rationale=str(data.get("age_rationale", "")).strip()[:200],
     )
 
 
