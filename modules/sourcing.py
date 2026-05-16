@@ -218,11 +218,7 @@ USER_PROMPT = (
 
 def _real_products_block(category: str, n_subs: int,
                          verify_urls: bool = False) -> str:
-    """Pre-fetched real top sellers as a prompt block; ``""`` when no source
-    is available. Tries the local HF dataset first (free, offline) and falls
-    back to Keepa (paid, live). When ``verify_urls=True``, dataset rows are
-    HEAD-verified against amazon.com and dead ASINs are dropped first.
-    """
+    """Real top sellers as prompt block (HF dataset → Keepa fallback)."""
     target = max(15, n_subs * PRODUCTS_N)
     rows = sources.dataset_top_asins(category, n=target)
     if rows and verify_urls:
@@ -250,7 +246,7 @@ def _from_llm(category: str, n_subs: int,
         candidates=_get_node_candidates(category) or "(없음 — 빈 문자열로 두세요)",
         real_block=_real_products_block(category, n_subs, verify_urls),
     )
-    data = ask_json(prompt, max_tokens=3500)
+    data = ask_json(prompt, max_tokens=6000)
     if not isinstance(data, list):
         return None
     clean: list[dict] = []
@@ -266,8 +262,11 @@ def _from_llm(category: str, n_subs: int,
     return clean or None
 
 
-_FALLBACK_MODIFIERS = ("ideas", "set", "accessories", "decor", "for kids",
-                       "for adults", "essentials", "kit", "best", "premium")
+# Universal SEO-friendly modifiers (replaces prev "ideas/for kids/decor"
+# which mis-fit categories like compression socks or wine accessories).
+_FALLBACK_MODIFIERS = ("", "best", "top rated", "premium",
+                       "amazon best seller", "review", "popular", "set",
+                       "kit", "2026")
 
 
 def _fallback_spec(category: str, n_subs: int) -> list[dict]:
