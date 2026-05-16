@@ -1,15 +1,17 @@
-"""LLM access with a free-first / quality-tier strategy + offline fallback.
+"""LLM access with Claude-first preference + Gemini free fallback.
 
 Tiers
 -----
-    "fast"     - Gemini Flash (free) first, then Claude Sonnet, then None.
+    "fast"     - Claude Sonnet first, Gemini Flash fallback.
                  Bulk work: category analysis, sourcing lists, generating new
                  trending categories.
-    "quality"  - Claude Sonnet first, then Gemini Flash, then None.
+    "quality"  - Claude Sonnet first, Gemini Flash fallback.
                  Creativity / nuance: shop-name ideas, Go/No-Go summary.
 
-Resolution per tier: try the primary provider, then the secondary, then give
-up. Callers that receive ``None`` must fall back to a deterministic heuristic.
+Both tiers currently prefer Claude because the user has paid Claude credit
+they want to consume; Gemini Flash (free) acts as graceful degradation when
+Claude is unavailable / rate-limited. Callers that receive ``None`` must
+fall back to a deterministic heuristic.
 
 Keys come from the environment (loaded from .env by the app):
     ANTHROPIC_API_KEY   - Claude
@@ -87,8 +89,8 @@ def _call_claude(prompt: str, max_tokens: int) -> Optional[str]:
 
 
 _TIER_ORDER = {
-    "fast": (_call_gemini, _call_claude),
-    "quality": (_call_claude, _call_gemini),
+    "fast": (_call_claude, _call_gemini),     # Claude first, Gemini fallback
+    "quality": (_call_claude, _call_gemini),  # (was already Claude-first)
 }
 
 
@@ -114,11 +116,11 @@ def is_available(tier: str = "fast") -> bool:
 def provider_label() -> str:
     g, c = _google_key() is not None, _anthropic_key() is not None
     if g and c:
-        return "Gemini Flash(무료) + Claude Sonnet"
-    if g:
-        return "Gemini Flash(무료)"
+        return "Claude Sonnet + Gemini Flash(폴백)"
     if c:
         return "Claude Sonnet"
+    if g:
+        return "Gemini Flash(무료)"
     return "없음 (mock 데이터)"
 
 
