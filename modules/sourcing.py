@@ -45,8 +45,9 @@ GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
 
 def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
     """NODE_DB entries matching ``text``, best first as (node_id, key, score).
-    Word-level: whole-word=2, substring=1, GENERIC_WORDS halved. Ties broken
-    by key specificity (more words). Empty list when no match."""
+    Word-level: whole-word=2, substring=1, GENERIC_WORDS halved. Requires
+    >=50% of the key's words to match (so ``"accessories"`` alone doesn't
+    misroute "compression socks" → "phone accessories")."""
     words = set(_WORD_RE.findall(text.lower()))
     if not words:
         return []
@@ -54,6 +55,7 @@ def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
     for key, node in NODE_DB.items():
         key_words = key.split()
         score = 0.0
+        hits = 0
         for w in key_words:
             if w in words:
                 hit = 2.0
@@ -61,8 +63,9 @@ def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
                 hit = 1.0
             else:
                 continue
+            hits += 1
             score += hit * 0.5 if w in GENERIC_WORDS else hit
-        if score > 0:
+        if score > 0 and hits / len(key_words) >= 0.5:
             scored.append((node, key, score, len(key_words)))
     scored.sort(key=lambda t: (t[2], t[3]), reverse=True)
     return [(node, key, score) for node, key, score, _ in scored]
