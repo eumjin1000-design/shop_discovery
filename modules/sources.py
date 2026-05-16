@@ -132,10 +132,10 @@ _IDX_AMAZON, _IDX_NEW, _IDX_SALES, _IDX_RATING, _IDX_REVIEWS = 0, 1, 3, 16, 17
 
 
 def keepa_snapshot(category: str) -> Optional[dict]:
-    """Best-effort real snapshot for ``category``; ``None`` on any failure.
-
-    Returns a dict with: best_rank, median_rank, sampled_products,
-    competing_listings, avg_rating, reviews_analyzed.
+    """Best-effort real snapshot for ``category``; ``None`` on failure OR
+    10s timeout (Streamlit Cloud sometimes sees Keepa hang). Returns a dict
+    with: best_rank, median_rank, sampled_products, competing_listings,
+    avg_rating, reviews_analyzed.
     """
     key = _env("KEEPA_API_KEY")
     if not key:
@@ -143,8 +143,7 @@ def keepa_snapshot(category: str) -> Optional[dict]:
     if category in _KEEPA_CACHE:
         return _KEEPA_CACHE[category]
 
-    snapshot: Optional[dict] = None
-    try:  # TODO: tune parsing against live Keepa responses if fields drift.
+    def _do_call() -> Optional[dict]:
         import keepa
 
         api = keepa.Keepa(key)
@@ -184,7 +183,7 @@ def keepa_snapshot(category: str) -> Optional[dict]:
             raise RuntimeError("Keepa returned no usable rank/rating data")
 
         ranks_sorted = sorted(ranks)
-        snapshot = {
+        return {
             "best_rank": ranks_sorted[0] if ranks_sorted else None,
             "median_rank": ranks_sorted[len(ranks_sorted) // 2] if ranks_sorted else None,
             "sampled_products": len(products),
@@ -193,9 +192,8 @@ def keepa_snapshot(category: str) -> Optional[dict]:
             "reviews_analyzed": int(statistics.fmean(reviews)) if reviews else None,
             "category_name": cats.get(cat_id),
         }
-    except Exception:
-        snapshot = None
 
+    snapshot = _with_timeout(_do_call)
     _KEEPA_CACHE[category] = snapshot
     return snapshot
 
