@@ -52,6 +52,7 @@ def _coerce(item: dict) -> CuratedCategory | None:
         demand=rate(item.get("demand")),
         competition=rate(item.get("competition")),
         reason=str(item.get("reason", "")).strip() or "AI 추천 트렌딩 카테고리.",
+        age=str(item.get("age", "")).strip()[:20],
     )
 
 
@@ -187,27 +188,41 @@ def random_category() -> CuratedCategory:
     return random.choice(all_categories())
 
 
-def generate_new_categories(n: int = 20, replace: bool = False) -> list[CuratedCategory]:
+def generate_new_categories(n: int = 20, replace: bool = False,
+                            target_age: str = "") -> list[CuratedCategory]:
     """Ask the AI for `n` trending dropshipping categories not used before.
 
     ``replace=True`` (the "AI 새목록" action): back up the current generated
     list + analysis history, then replace the generated list with the fresh
     ones and clear the history. ``replace=False``: append to the existing list
     (deduped). Returns ``[]`` if the API is unavailable or returns nothing.
+
+    ``target_age`` (e.g. ``"40-60"``): when non-empty, instruct the LLM to
+    prioritise niches whose primary US buyers fall in that age range — and
+    populate each result's ``age`` field. Empty = no age filter.
     """
     exclude = ({c.name.lower() for c in CURATED}
                | {c.name.lower() for c in all_categories()}
                | {h.lower() for h in load_history()})
+    age_clause = (
+        f"\nFOCUS: categories whose primary US buyer age range falls within "
+        f"**{target_age}**. Examples for 40-60: orthopedic supports, "
+        "gardening tools, premium kitchen, golf accessories, hair growth, "
+        "joint supplements. Avoid Gen-Z-only niches.\n"
+        if target_age else ""
+    )
     prompt = (
         "You are a dropshipping market analyst. List "
         f"{n} CURRENTLY TRENDING dropshipping product categories suitable for a "
         "brand-new store. Do NOT include any of these already-used categories "
-        f"(case-insensitive): {sorted(exclude)}. For each category rate "
-        "`margin`, `demand`, `competition` on a 1-3 scale where 3 is most "
-        "favorable (competition: 3 = least crowded). Give a one-line Korean "
-        "`reason` referencing margin/demand/competition. Return ONLY a JSON "
-        'array: [{"name": "<English>", "margin": 1-3, "demand": 1-3, '
-        '"competition": 1-3, "reason": "<Korean>"}]. No prose.'
+        f"(case-insensitive): {sorted(exclude)}." + age_clause + " For each "
+        "category rate `margin`, `demand`, `competition` on a 1-3 scale where "
+        "3 is most favorable (competition: 3 = least crowded). Give a "
+        "one-line Korean `reason` referencing margin/demand/competition. "
+        'Also include `age` (e.g. "25-34" or "40-60") — primary US buyer age. '
+        "Return ONLY a JSON array: "
+        '[{"name": "<English>", "margin": 1-3, "demand": 1-3, '
+        '"competition": 1-3, "reason": "<Korean>", "age": "<range>"}]. No prose.'
     )
     data = ask_json(prompt, max_tokens=2048)
     if not isinstance(data, list):

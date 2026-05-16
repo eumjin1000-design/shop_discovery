@@ -20,6 +20,7 @@ class CuratedCategory:
     demand: int        # 1..3
     competition: int   # 1..3 (higher == less crowded)
     reason: str
+    age: str = ""      # primary buyer age range, e.g. "25-34" or "40-60"
 
     def stars(self) -> str:
         def s(n: int) -> str:
@@ -27,7 +28,8 @@ class CuratedCategory:
         return f"마진 {s(self.margin)} · 수요 {s(self.demand)} · 경쟁여유 {s(self.competition)}"
 
     def label(self) -> str:
-        return f"{self.name}  —  {self.stars()}"
+        suffix = f" · {self.age}" if self.age else ""
+        return f"{self.name}  —  {self.stars()}{suffix}"
 
 
 CURATED: tuple[CuratedCategory, ...] = (
