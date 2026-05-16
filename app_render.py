@@ -240,15 +240,13 @@ def _sourcing_block(category: str) -> None:
     n_subs = c_sub.slider("서브카테고리 수", 2, 30, sourcing.DEFAULT_SUBS, key="src_subs")
     n_vars = c_var.slider("변형 수", 1, 20, sourcing.DEFAULT_VARIANTS, key="src_vars")
     st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
-    verify_urls = st.checkbox(
-        "🔍 URL 검증 (죽은 ASIN 제거, +30~45초)", value=False, key="src_verify",
-        help="HF dataset(2023-09 컷오프)의 ASIN을 amazon.com에 GET-stream 검증해 404/CAPTCHA를 LLM 프롬프트에서 제거. Electronics는 1.5초 간격 + 5초 재시도 적용.",
-    )
+    verify_urls = st.checkbox("🔍 URL 검증 (죽은 ASIN 제거, +30~45초)",
+        value=False, key="src_verify",
+        help="HF dataset(2023-09)의 ASIN을 GET-stream으로 검증해 404/CAPTCHA 제거. Electronics는 1.5초 간격 + 재시도.")
     if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
         with st.spinner("생성 + URL 검증 중..." if verify_urls else "소싱 리스트 생성 중..."):
-            res = sourcing.generate_sourcing_list(
-                category, n_subs=n_subs, n_variants=n_vars,
-                verify_urls=verify_urls)
+            res = sourcing.generate_sourcing_list(category, n_subs=n_subs,
+                n_variants=n_vars, verify_urls=verify_urls)
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"),
             )
@@ -258,31 +256,32 @@ def _sourcing_block(category: str) -> None:
     res = st.session_state.get("sourcing_res") if st.session_state.get("sourcing_cat") == category else None
     if not res:
         return
-    st.write(f"{res.summary}  ·  미리보기 (상위 20개)")
-    st.dataframe(
-        [{"#": i + 1, "서브카테고리": r.subcategory, "브랜드(추정)": r.brand or "—",
-          "상품명": r.product_name, "Amazon URL": r.amazon_url,
-          "예상가격($)": r.est_price, "키워드": r.keyword, "ASIN": r.asin or "—",
-          "리뷰수": r.review_count or "—"}
-         for i, r in enumerate(res.rows[:20])],
-        width="stretch", hide_index=True,
-    )
+    # Preview: 1 row per (sub, product) so all distinct subcats visible.
+    seen, prev = set(), []
+    for r in res.rows:
+        k = (r.subcategory, r.base_product)
+        if k in seen: continue
+        seen.add(k)
+        prev.append({"#": len(prev) + 1, "서브카테고리": r.subcategory,
+                     "브랜드(추정)": r.brand or "—", "상품명": r.base_product,
+                     "Amazon URL": r.amazon_url, "예상가격($)": r.est_price,
+                     "키워드": r.keyword, "ASIN": r.asin or "—",
+                     "리뷰수": r.review_count or "—"})
+        if len(prev) >= 30: break
+    st.write(f"{res.summary}  ·  미리보기 (유니크 상품 {len(prev)}개)")
+    st.dataframe(prev, width="stretch", hide_index=True)
     with st.expander("📋 키워드만 복사 (우측 상단 아이콘)"):
         st.code("\n".join(dict.fromkeys(r.keyword for r in res.rows if r.keyword)), language=None)
     path = st.session_state["sourcing_path"]
     txt_path = Path(path).with_suffix(".txt")
     d_xlsx, d_txt = st.columns(2)
-    d_xlsx.download_button(
-        "⬇️ Excel 다운로드", data=Path(path).read_bytes(),
+    d_xlsx.download_button("⬇️ Excel 다운로드", data=Path(path).read_bytes(),
         file_name=Path(path).name, key="sourcing_dl", width="stretch",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     if txt_path.exists():
-        d_txt.download_button(
-            "⬇️ Spark 일괄입력 .txt", data=txt_path.read_bytes(),
-            file_name=txt_path.name, key="sourcing_txt_dl", width="stretch",
-            mime="text/plain",
-        )
+        d_txt.download_button("⬇️ Spark 일괄입력 .txt",
+            data=txt_path.read_bytes(), file_name=txt_path.name,
+            key="sourcing_txt_dl", width="stretch", mime="text/plain")
     st.caption(
         f"`output/{Path(path).name}` (Amazon URL = 셀 하이퍼링크) + `{txt_path.name}` "
         "(`카테고리|서브카테고리|URL` — Spark 일괄입력 탭에 붙여넣고 작업 시작)"
