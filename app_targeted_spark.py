@@ -27,14 +27,20 @@ def render_targeted_spark_section(category: str) -> None:
     st.markdown("**🎯 이 카테고리 Spark URL** — 분석한 카테고리에 집중된 8~12 URL")
     st.caption(f"`{category}` · {mapping_note} · 각 URL이 Spark에서 페이지네이션")
 
-    n_var = st.slider("키워드 변형 수", 3, 12, 8, key="tgt_spark_n",
-                      help="기본 8개. 변형 예: 원본, ideas, set, kit, "
+    n_var = st.slider("키워드 변형 수", 3, 12, 12, key="tgt_spark_n",
+                      help="기본 12. 변형 예: 원본, ideas, set, kit, "
                            "accessories, for kids, decor, essentials, best ...")
+    include_broad = st.checkbox(
+        f"🌐 매핑 카테고리({hf_cat or '미매핑'})의 브로드 키워드도 포함 — 5만+ 목표 시 권장",
+        value=True, key="tgt_broad",
+        help="활성 시 reading nook → Home_and_Kitchen 26개 브로드 키워드도 추가 "
+             "(12+26=38 URL, 예상 ~34K 상품).")
 
     if st.button("🎯 이 카테고리 Spark URL 생성", key="gen_targeted",
                  width="stretch"):
         with st.spinner("Spark URL 생성 중..."):
-            res = bulk_sourcing.spark_query_list(category, n_variations=n_var)
+            res = bulk_sourcing.spark_query_list(
+                category, n_variations=n_var, include_broad=include_broad)
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"))
         st.session_state["targeted_res"] = res

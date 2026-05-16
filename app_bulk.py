@@ -85,14 +85,26 @@ def render_bulk_sourcing_section() -> None:
             return
         st.info(f"타겟: **{analyzed}** (위에서 분석한 카테고리)")
         query_text = analyzed
-        n_var = st.slider("키워드 변형 수", 3, 12, 8, key="bulk_nvar_t")
-        st.caption(f"→ {n_var}개 Spark URL (변형: ideas, set, accessories ...)")
+        n_var = st.slider("키워드 변형 수", 3, 12, 12, key="bulk_nvar_t")
+        include_broad_t = st.checkbox(
+            "🌐 매핑 카테고리의 브로드 키워드도 포함 (URL 수 ↑, 5만+ 목표 시 권장)",
+            value=True, key="bulk_broad_t",
+            help="예: reading nook → Home_and_Kitchen 브로드 키워드 26개 추가 "
+                 "= 12+26=38 URL, 예상 ~34K 상품.")
+        st.session_state["_bulk_target_broad"] = include_broad_t
+        msg = f"→ {n_var}개 변형"
+        if include_broad_t:
+            msg += " + 매핑 카테고리 브로드 키워드 (예상 +26개)"
+        st.caption(msg)
     elif is_custom:
         query_text = st.text_input("키워드 입력",
                                     placeholder="예: reading nook",
                                     key="bulk_custom_q")
         n_var = st.slider("키워드 변형 수", 3, 12, 8, key="bulk_nvar_c")
-        st.caption(f"→ {n_var}개 Spark URL (입력 + ideas/set/decor 등 변형)")
+        include_broad_c = st.checkbox(
+            "🌐 매핑 카테고리의 브로드 키워드도 포함",
+            value=False, key="bulk_broad_c")
+        st.session_state["_bulk_custom_broad"] = include_broad_c
 
     can_run = (selected if (is_broad or is_direct) else query_text)
     if not can_run:
@@ -108,8 +120,11 @@ def render_bulk_sourcing_section() -> None:
                 res = bulk_sourcing.bulk_sourcing_list(selected,
                                                        n_per_cat=n_per_cat)
             else:  # is_target or is_custom
-                res = bulk_sourcing.spark_query_list(query_text,
-                                                     n_variations=n_var)
+                broad = st.session_state.get(
+                    "_bulk_target_broad" if is_target else "_bulk_custom_broad",
+                    False)
+                res = bulk_sourcing.spark_query_list(
+                    query_text, n_variations=n_var, include_broad=broad)
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"))
         st.session_state["bulk_res"] = res
