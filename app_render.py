@@ -11,8 +11,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+import app_go_tools
 import app_spark_ui as spark_ui
-from modules import batch_report, report_gen, shop_namer, sourcing, sourcing_report
+from modules import batch_report, report_gen
 from modules.models import PipelineResult
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
@@ -215,85 +216,12 @@ def render_strategy(result: PipelineResult) -> None:
               help="시각적 매력도 평가 — 추후 이미지/영상 분석 모듈 연동 예정")
 
 
-def _shop_name_block(category: str) -> None:
-    st.markdown("**🏷️ 샵 이름 자동 생성** — 영어 · 기억하기 쉬움 · .com 가능성 고려")
-    if st.button("🏷️ 샵 이름 5개 생성", key="gen_shop_names"):
-        with st.spinner("샵 이름 생성 중..."):
-            st.session_state["shop_names"] = shop_namer.generate_shop_names(category, 5)
-        st.session_state["shop_names_cat"] = category
-    names = (st.session_state.get("shop_names")
-             if st.session_state.get("shop_names_cat") == category else None)
-    if not names:
-        return
-    by = {sn.name: sn for sn in names}
-    chosen = st.radio(
-        "마음에 드는 이름 선택", [sn.name for sn in names], key="shop_name_radio",
-        format_func=lambda n: f"{n}  —  {by[n].concept}  ·  🌐 {by[n].domain}",
-    )
-    st.session_state["shop_name_selected"] = chosen
-    st.success(f"선택: **{chosen}**  ·  도메인 후보: `{by[chosen].domain}`")
-
-
-def _sourcing_block(category: str) -> None:
-    st.markdown("**📦 소싱 리스트 자동 생성** — 서브카테고리 × 상품 × 변형 (Amazon 노드·Prime·리뷰순 URL, Spark 수집용)")
-    c_sub, c_var = st.columns(2)
-    n_subs = c_sub.slider("서브카테고리 수", 2, 30, sourcing.DEFAULT_SUBS, key="src_subs")
-    n_vars = c_var.slider("변형 수", 1, 20, sourcing.DEFAULT_VARIANTS, key="src_vars")
-    st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
-    verify_urls = st.checkbox("🔍 URL 검증 (죽은 ASIN 제거, +30~45초)",
-        value=False, key="src_verify",
-        help="HF dataset(2023-09)의 ASIN을 GET-stream으로 검증해 404/CAPTCHA 제거. Electronics는 1.5초 간격 + 재시도.")
-    if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
-        with st.spinner("생성 + URL 검증 중..." if verify_urls else "소싱 리스트 생성 중..."):
-            res = sourcing.generate_sourcing_list(category, n_subs=n_subs,
-                n_variants=n_vars, verify_urls=verify_urls)
-            path = sourcing_report.write_sourcing_report(
-                res, shop_name=st.session_state.get("shop_name_selected"),
-            )
-        st.session_state["sourcing_res"] = res
-        st.session_state["sourcing_path"] = path
-        st.session_state["sourcing_cat"] = category
-    res = st.session_state.get("sourcing_res") if st.session_state.get("sourcing_cat") == category else None
-    if not res:
-        return
-    # Preview: 1 row per (sub, product) so all distinct subcats visible.
-    seen, prev = set(), []
-    for r in res.rows:
-        k = (r.subcategory, r.base_product)
-        if k in seen: continue
-        seen.add(k)
-        prev.append({"#": len(prev) + 1, "서브카테고리": r.subcategory,
-                     "브랜드(추정)": r.brand or "—", "상품명": r.base_product,
-                     "Amazon URL": r.amazon_url, "예상가격($)": r.est_price,
-                     "키워드": r.keyword, "ASIN": r.asin or "—",
-                     "리뷰수": r.review_count or "—"})
-        if len(prev) >= 30: break
-    st.write(f"{res.summary}  ·  미리보기 (유니크 상품 {len(prev)}개)")
-    st.dataframe(prev, width="stretch", hide_index=True)
-    with st.expander("📋 키워드만 복사 (우측 상단 아이콘)"):
-        st.code("\n".join(dict.fromkeys(r.keyword for r in res.rows if r.keyword)), language=None)
-    path = st.session_state["sourcing_path"]
-    txt_path = Path(path).with_suffix(".txt")
-    d_xlsx, d_txt = st.columns(2)
-    d_xlsx.download_button("⬇️ Excel 다운로드", data=Path(path).read_bytes(),
-        file_name=Path(path).name, key="sourcing_dl", width="stretch",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    if txt_path.exists():
-        d_txt.download_button("⬇️ Spark 일괄입력 .txt",
-            data=txt_path.read_bytes(), file_name=txt_path.name,
-            key="sourcing_txt_dl", width="stretch", mime="text/plain")
-    st.caption(
-        f"`output/{Path(path).name}` (Amazon URL = 셀 하이퍼링크) + `{txt_path.name}` "
-        "(`카테고리|서브카테고리|URL` — Spark 일괄입력 탭에 붙여넣고 작업 시작)"
-    )
-
-
 def render_go_tools(result: PipelineResult) -> None:
-    """샵 이름 / 소싱 리스트 자동 생성 — GO 판정 카테고리에서만 노출."""
+    """샵 이름 / 소싱 리스트 자동 생성 — GO 판정 카테고리에서만 노출.
+    Sourcing/shop-name blocks live in :mod:`app_go_tools` so this file
+    stays under the 300-line hard limit."""
     st.subheader("🚀 다음 단계 (GO 전용)")
     category = result.request.category
-    _shop_name_block(category)
-    st.divider()
-    _sourcing_block(category)
+    app_go_tools.render_go_tools_blocks(category)
     st.divider()
     spark_ui.render_spark_import_section(category)

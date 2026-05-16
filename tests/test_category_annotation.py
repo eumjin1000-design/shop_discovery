@@ -63,8 +63,9 @@ class TestGenerateSourcingListNoParens(unittest.TestCase):
     """End-to-end: generate_sourcing_list must not emit parentheses."""
 
     def test_no_parens_in_any_output_field(self):
-        # Patch _from_llm to return None — forces deterministic fallback path
-        with patch("modules.sourcing._from_llm", return_value=None):
+        # Patch from_llm_multipass to return None — forces fallback path.
+        # _from_llm moved to modules.sourcing_llm during the passes/pages split.
+        with patch("modules.sourcing.from_llm_multipass", return_value=None):
             from modules.sourcing import generate_sourcing_list
             result = generate_sourcing_list(_ANNOTATED, n_subs=3, n_variants=2)
 

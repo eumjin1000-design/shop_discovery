@@ -24,23 +24,34 @@ def render_targeted_spark_section(category: str) -> None:
     mapping_note = (f"매핑: **{hf_cat}** (node `{node}`)"
                     if hf_cat else "매핑: 없음 — 일반 검색 URL")
 
-    st.markdown("**🎯 이 카테고리 Spark URL** — 분석한 카테고리에 집중된 8~12 URL")
-    st.caption(f"`{category}` · {mapping_note} · 각 URL이 Spark에서 페이지네이션")
+    st.markdown("**🎯 이 카테고리 Spark URL** — 분석한 카테고리에 집중된 URL 묶음")
+    st.caption(f"`{category}` · {mapping_note} · 각 URL은 시스템이 직접 페이지 사전 확장")
 
-    n_var = st.slider("키워드 변형 수", 3, 12, 12, key="tgt_spark_n",
-                      help="기본 12. 변형 예: 원본, ideas, set, kit, "
-                           "accessories, for kids, decor, essentials, best ...")
+    if st.button("🚀 정확도 최대 (변형 20·페이지 5·브로드 ON)",
+                 key="tgt_preset", help="안전선 내 최대값으로 자동 세팅"):
+        st.session_state["tgt_spark_n"] = 20
+        st.session_state["tgt_pages"] = 5
+        st.session_state["tgt_broad"] = True
+        st.rerun()
+    c_var, c_pg = st.columns(2)
+    n_var = c_var.number_input("키워드 변형 수", min_value=1, max_value=20,
+        value=st.session_state.get("tgt_spark_n", 12),
+        step=1, key="tgt_spark_n",
+        help="원본 + SEO 친화 modifier (best/top rated/premium/...). 최대 20개")
+    n_pages = c_pg.slider("페이지 깊이", 1, 5,
+        st.session_state.get("tgt_pages", 1), key="tgt_pages",
+        help="각 검색 URL을 page 1..N으로 사전 확장. 5까지가 정확도 안전선")
     include_broad = st.checkbox(
-        f"🌐 매핑 카테고리({hf_cat or '미매핑'})의 브로드 키워드도 포함 — 5만+ 목표 시 권장",
-        value=True, key="tgt_broad",
-        help="활성 시 reading nook → Home_and_Kitchen 26개 브로드 키워드도 추가 "
-             "(12+26=38 URL, 예상 ~34K 상품).")
+        f"🌐 매핑 카테고리({hf_cat or '미매핑'})의 브로드 키워드도 포함",
+        value=st.session_state.get("tgt_broad", True), key="tgt_broad",
+        help="활성 시 매핑 HF 카테고리의 10~26개 브로드 키워드도 추가")
 
     if st.button("🎯 이 카테고리 Spark URL 생성", key="gen_targeted",
                  width="stretch"):
         with st.spinner("Spark URL 생성 중..."):
             res = bulk_sourcing.spark_query_list(
-                category, n_variations=n_var, include_broad=include_broad)
+                category, n_variations=int(n_var), include_broad=include_broad,
+                pages=int(n_pages))
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"))
         st.session_state["targeted_res"] = res

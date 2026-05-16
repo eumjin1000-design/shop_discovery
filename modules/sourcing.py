@@ -214,7 +214,7 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
     pass_note = f" × {passes}패스" if passes > 1 else ""
     page_note = f" × {pages}페이지" if pages > 1 else ""
     summary = (
-        f"{category} 소싱 — {actual_subs}개 서브({n_subs}{pass_note}) × "
+        f"{category} 소싱 — {actual_subs}개 서브{pass_note} × "
         f"{PRODUCTS_N}상품 × {n_variants}변형{page_note} = **{total}개**. "
         "Amazon URL = 노드 + Prime + 리뷰순; brand 추정." + warn
     )
