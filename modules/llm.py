@@ -54,9 +54,16 @@ def _google_key() -> Optional[str]:
 # --------------------------------------------------------------------------
 # Provider calls — each returns raw response text, or None on any failure.
 # --------------------------------------------------------------------------
+def _log_err(provider: str, err: Exception) -> None:
+    # Surfaced in console + Streamlit Cloud Logs panel so we can see which
+    # API error actually caused a fallback (timeout, rate limit, auth, etc.).
+    print(f"[LLM][{provider}] {type(err).__name__}: {err}", flush=True)
+
+
 def _call_gemini(prompt: str, max_tokens: int) -> Optional[str]:
     key = _google_key()
     if key is None:
+        print("[LLM][gemini] skipped: GOOGLE_API_KEY not set", flush=True)
         return None
     try:
         import google.generativeai as genai
@@ -66,14 +73,19 @@ def _call_gemini(prompt: str, max_tokens: int) -> Optional[str]:
         resp = model.generate_content(
             prompt, generation_config={"max_output_tokens": max_tokens}
         )
-        return resp.text or None
-    except Exception:
+        text = resp.text or None
+        if not text:
+            print("[LLM][gemini] empty response (possibly safety-filtered)", flush=True)
+        return text
+    except Exception as e:
+        _log_err("gemini", e)
         return None
 
 
 def _call_claude(prompt: str, max_tokens: int) -> Optional[str]:
     key = _anthropic_key()
     if key is None:
+        print("[LLM][claude] skipped: ANTHROPIC_API_KEY not set", flush=True)
         return None
     try:
         import anthropic
@@ -83,8 +95,12 @@ def _call_claude(prompt: str, max_tokens: int) -> Optional[str]:
             model=_CLAUDE_MODEL, max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
-        return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text") or None
-    except Exception:
+        text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text") or None
+        if not text:
+            print(f"[LLM][claude] empty response (stop_reason={getattr(msg, 'stop_reason', '?')})", flush=True)
+        return text
+    except Exception as e:
+        _log_err("claude", e)
         return None
 
 
@@ -134,7 +150,11 @@ def ask_json(prompt: str, *, tier: str = "fast", max_tokens: int = 1024) -> Opti
     text = _ask_raw(prompt, tier, max_tokens)
     if not text:
         return None
-    return _extract_json(text)
+    parsed = _extract_json(text)
+    if parsed is None:
+        preview = text[:200].replace("\n", " ")
+        print(f"[LLM][json] parse failed (preview): {preview!r}", flush=True)
+    return parsed
 
 
 def _extract_json(text: str) -> Optional[Any]:
