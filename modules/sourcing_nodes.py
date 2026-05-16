@@ -32,7 +32,10 @@ NODE_DB: dict[str, str] = {
     "feeding": "166585011", "baby toys": "165793011",
     # Clothing & Fashion
     "clothing": "7141123011", "mens clothing": "1036592", "womens clothing": "1045024",
-    "shoes": "672123011", "accessories": "7141123011",
+    "shoes": "672123011",
+    # NOTE: "accessories" 단일어 키는 제거 — 너무 일반적이어서 임의의
+    # "{category} accessories" 입력을 Clothing 노드로 잘못 라우팅함.
+    # 카테고리 특화 compound (phone accessories, car accessories 등)만 유지.
     # Office
     "office products": "1069242", "office supplies": "1069242", "desk accessories": "1069242",
     # Automotive

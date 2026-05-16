@@ -65,7 +65,7 @@ def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
                 continue
             hits += 1
             score += hit * 0.5 if w in GENERIC_WORDS else hit
-        if score > 0 and hits / len(key_words) >= 0.5:
+        if score > 0 and hits / len(key_words) > 0.5:
             scored.append((node, key, score, len(key_words)))
     scored.sort(key=lambda t: (t[2], t[3]), reverse=True)
     return [(node, key, score) for node, key, score, _ in scored]
