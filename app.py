@@ -71,12 +71,13 @@ _HAND = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' "
          "<circle cx='16' cy='16' r='9' fill='%23E50914' stroke='white' "
          "stroke-width='1.5'/><circle cx='16' cy='16' r='3' fill='white'/>"
          "</svg>")
+# Scoped to body + interactive elements only (avoid '*' which caused React
+# DOM reconciliation errors on Streamlit Cloud — see NotFoundError on
+# removeChild). Streamlit Cloud users should hard-reload (Ctrl+Shift+R)
+# after any deploy if they hit DOM errors.
 st.markdown(
-    f"<style>*{{cursor:url(\"{_ARROW}\") 0 0,default;}} "
-    f"button,a,[role='button'],input[type='checkbox'],input[type='radio'],"
-    f"select,label{{cursor:url(\"{_HAND}\") 16 16,pointer !important;}} "
-    "input[type='text'],input[type='number'],textarea{cursor:text !important;}"
-    "</style>",
+    f"<style>body{{cursor:url(\"{_ARROW}\") 0 0,default}} "
+    f"button,a{{cursor:url(\"{_HAND}\") 16 16,pointer}}</style>",
     unsafe_allow_html=True,
 )
 
