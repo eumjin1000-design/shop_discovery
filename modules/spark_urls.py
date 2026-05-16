@@ -158,13 +158,16 @@ def build_search_url(keyword: str, brand: str = "", base_product: str = "",
     """Amazon search URL — Spark-native when ``node_id`` is set.
 
     Logic:
-      1. If ``keyword`` is empty/short, synthesise one from ``brand`` + the
+      1. Strip ``(annotation)`` parenthetical content from keyword (CURATED
+         category names like ``"Car accessories (organizer, phone mount)"``
+         break Amazon search if left literal).
+      2. If ``keyword`` is empty/short, synthesise one from ``brand`` + the
          first three meaningful words of ``base_product``.
-      2. When ``node_id`` is a real node, emit a guide-format URL
+      3. When ``node_id`` is a real node, emit a guide-format URL
          (``keywords=...&rh=n%3A...,AFN,Prime&c=ts``).
-      3. Otherwise fall back to a basic ``s?k=...`` keyword search.
+      4. Otherwise fall back to a basic ``s?k=...`` keyword search.
     """
-    kw = (keyword or "").strip()
+    kw = re.sub(r"\s*\([^)]*\)", "", keyword or "").strip()
     if len(kw) < 4:
         bw = set((brand or "").lower().split())
         ws = [w for w in re.findall(r"[a-zA-Z]{3,}",

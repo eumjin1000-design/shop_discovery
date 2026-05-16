@@ -45,12 +45,8 @@ GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
 
 def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
     """NODE_DB entries matching ``text``, best first as (node_id, key, score).
-
-    Word-level scoring: a key word scores 2 for a whole-word match, 1 for a
-    substring-only match — halved (1 / 0.5) when the word is in
-    :data:`GENERIC_WORDS`. Ties broken by key specificity (more words). Empty
-    list when nothing matches.
-    """
+    Word-level: whole-word=2, substring=1, GENERIC_WORDS halved. Ties broken
+    by key specificity (more words). Empty list when no match."""
     words = set(_WORD_RE.findall(text.lower()))
     if not words:
         return []
@@ -72,17 +68,21 @@ def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
     return [(node, key, score) for node, key, score, _ in scored]
 
 
+def _strip_annotation(text: str) -> str:
+    """Strip ``(annotation)`` so CURATED names like ``"Car accessories
+    (organizer, phone mount)"`` don't leak words to wrong NODE_DB keys."""
+    return re.sub(r"\s*\([^)]*\)", "", text or "").strip()
+
+
 def _guess_node(category: str, subcategory: str = "") -> str:
-    """Best-effort Amazon browse-node id; :data:`_NODE_NONE` ("1000") if none."""
-    ranked = _ranked_nodes(f"{category} {subcategory}")
+    """Best-effort Amazon browse-node id; :data:`_NODE_NONE` if none."""
+    ranked = _ranked_nodes(
+        f"{_strip_annotation(category)} {_strip_annotation(subcategory)}")
     return ranked[0][0] if ranked else _NODE_NONE
 
 
 def _get_node_candidates(category: str) -> str:
-    """Top-5 distinct NODE_DB matches for ``category`` as a one-line string:
-    ``"2619533011(pet supplies), 3774861(vitamins supplements), ..."`` —
-    empty string when nothing matches.
-    """
+    """Top-5 distinct NODE_DB matches as ``"node(key), node(key), ..."``."""
     seen: set[str] = set()
     out: list[str] = []
     for node, key, _ in _ranked_nodes(category):
