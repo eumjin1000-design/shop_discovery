@@ -29,7 +29,10 @@ PRODUCTS_N = 5                 # products per subcategory (fixed)
 DEFAULT_SUBS = 6
 DEFAULT_VARIANTS = 5
 _VARIANT_POOL = ["Standard", "Compact", "Premium", "Set of 2", "Travel Size",
-                 "Mini", "XL", "Refill Pack", "Gift Box", "Pro"]
+                 "Mini", "XL", "Refill Pack", "Gift Box", "Pro",
+                 "Set of 4", "Bulk Pack", "Deluxe", "Eco", "Smart",
+                 "Foldable", "Heavy Duty", "Lightweight", "Limited Edition",
+                 "Bundle"]
 _PRIME_NODE_US = "23533298011"  # p_n_prime_eligibility filter id on amazon.com
 _NODE_NONE = "1000"             # sentinel: no specific browse node guessed
 

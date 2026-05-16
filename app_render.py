@@ -237,8 +237,8 @@ def _shop_name_block(category: str) -> None:
 def _sourcing_block(category: str) -> None:
     st.markdown("**📦 소싱 리스트 자동 생성** — 서브카테고리 × 상품 × 변형 (Amazon 노드·Prime·리뷰순 URL, Spark 수집용)")
     c_sub, c_var = st.columns(2)
-    n_subs = c_sub.slider("서브카테고리 수", 2, 10, sourcing.DEFAULT_SUBS, key="src_subs")
-    n_vars = c_var.slider("변형 수", 1, 10, sourcing.DEFAULT_VARIANTS, key="src_vars")
+    n_subs = c_sub.slider("서브카테고리 수", 2, 30, sourcing.DEFAULT_SUBS, key="src_subs")
+    n_vars = c_var.slider("변형 수", 1, 20, sourcing.DEFAULT_VARIANTS, key="src_vars")
     st.caption(f"= {n_subs} × {sourcing.PRODUCTS_N} × {n_vars} = **{n_subs * sourcing.PRODUCTS_N * n_vars}개** 행")
     verify_urls = st.checkbox(
         "🔍 URL 검증 (죽은 ASIN 제거, +30~45초)", value=False, key="src_verify",
