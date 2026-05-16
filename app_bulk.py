@@ -42,63 +42,74 @@ def render_bulk_sourcing_section() -> None:
                 "직접 ASIN 모드는 로컬에서 `python scripts/build_dataset_index.py "
                 "--all` 실행 후 사용하세요.")
 
+    options = ["🌐 Spark 전체 16 카테고리 (207 URL, 5만+ 목표)",
+               "🎯 분석한 카테고리만 (집중)",
+               "✏️ 커스텀 키워드 (직접 입력)"]
     if db_ready:
-        mode = st.radio(
-            "출력 모드",
-            ["🎯 Spark 카테고리 URL (브로드, 추천)",
-             "📦 직접 ASIN URL (53K /dp/ + 검색 확장)"],
-            index=0, key="bulk_mode", horizontal=True,
-            help="Spark 카테고리 URL = PDF 가이드(11/24) 형식. URL당 수백~수천 "
-                 "상품 수확 (6h ≈ 900). 직접 ASIN URL = 매행이 특정 베스트셀러, "
-                 "Spark 수확량 적음.",
-        )
-        is_spark = mode.startswith("🎯")
-    else:
-        is_spark = True
-    cats = cats_db if (db_ready and not is_spark) else cats_spark
+        options.append("📦 직접 ASIN URL (53K /dp/ + 검색 확장)")
+    mode = st.radio("타겟 모드", options, index=0, key="bulk_mode",
+                    help="🌐 전체 = 모든 카테고리. 🎯 분석한 카테고리만 = 위에서 "
+                    "분석한 카테고리에 집중된 8~12 Spark URL. ✏️ 커스텀 = 직접 "
+                    "키워드 입력. 📦 직접 ASIN = 로컬 SQLite 인덱스 필요.")
+    is_broad = mode.startswith("🌐")
+    is_target = mode.startswith("🎯")
+    is_custom = mode.startswith("✏️")
+    is_direct = mode.startswith("📦")
+    cats = cats_spark if is_broad else (cats_db if is_direct else [])
 
-    selected = st.multiselect(
-        "카테고리 선택 (Ctrl/Shift 다중 선택)", cats,
-        default=cats, key="bulk_cats",
-        help="기본은 전체 16개 카테고리. 일부만 선택 가능.",
-    )
-    if not is_spark:
-        n_per_cat = st.slider(
-            "카테고리당 최대 ASIN 수", 100, bulk_sourcing.HARD_CAP,
-            value=3500, step=100, key="bulk_n",
-            help=f"카테고리당 최대 {bulk_sourcing.HARD_CAP:,}.",
-        )
-        st.caption(f"예상 최대 행 수: **{len(selected)} × {n_per_cat:,} = "
-                   f"{len(selected) * n_per_cat:,}개**")
-    else:
-        url_count = sum(len(spark_urls.HF_BROAD_KEYWORDS.get(c, [c])) for c in selected)
-        st.caption(
-            f"**{len(selected)} 카테고리 → {url_count} 브로드 검색 URL** — "
-            "Amazon 카테고리 깊이에 비례하여 자동 배분 (Home & Kitchen ≈ 26개, "
-            "Gift Cards ≈ 1개). Spark가 URL당 ~6시간 페이지네이션하며 "
-            "수백~수천 상품을 수확합니다."
-        )
-        with st.expander("📊 카테고리별 URL 배분 미리보기"):
-            preview = [
-                {"카테고리": c,
-                 "URL 수": len(spark_urls.HF_BROAD_KEYWORDS.get(c, [c]))}
-                for c in selected
-            ]
-            preview.sort(key=lambda x: -x["URL 수"])
-            st.dataframe(preview, width="stretch", hide_index=True)
+    selected, query_text, n_var, n_per_cat = [], "", 8, 3500
+    if is_broad or is_direct:
+        selected = st.multiselect("카테고리 선택", cats, default=cats,
+                                  key="bulk_cats")
+        if is_direct:
+            n_per_cat = st.slider("카테고리당 최대 ASIN 수", 100,
+                                  bulk_sourcing.HARD_CAP, value=3500,
+                                  step=100, key="bulk_n")
+            st.caption(f"예상 최대 행: **{len(selected)} × {n_per_cat:,} = "
+                       f"{len(selected) * n_per_cat:,}개**")
+        else:
+            url_count = sum(len(spark_urls.HF_BROAD_KEYWORDS.get(c, [c]))
+                            for c in selected)
+            st.caption(f"**{len(selected)} 카테고리 → {url_count} 브로드 검색 URL** "
+                       "(Home & Kitchen ≈ 26, Gift Cards ≈ 1)")
+            with st.expander("📊 카테고리별 URL 배분"):
+                preview = sorted(
+                    [{"카테고리": c, "URL 수":
+                      len(spark_urls.HF_BROAD_KEYWORDS.get(c, [c]))}
+                     for c in selected], key=lambda x: -x["URL 수"])
+                st.dataframe(preview, width="stretch", hide_index=True)
+    elif is_target:
+        analyzed = st.session_state.get("category_input", "")
+        if not analyzed:
+            st.warning("⚠️ 먼저 위 분석 폼에서 카테고리 분석을 진행하세요.")
+            return
+        st.info(f"타겟: **{analyzed}** (위에서 분석한 카테고리)")
+        query_text = analyzed
+        n_var = st.slider("키워드 변형 수", 3, 12, 8, key="bulk_nvar_t")
+        st.caption(f"→ {n_var}개 Spark URL (변형: ideas, set, accessories ...)")
+    elif is_custom:
+        query_text = st.text_input("키워드 입력",
+                                    placeholder="예: reading nook",
+                                    key="bulk_custom_q")
+        n_var = st.slider("키워드 변형 수", 3, 12, 8, key="bulk_nvar_c")
+        st.caption(f"→ {n_var}개 Spark URL (입력 + ideas/set/decor 등 변형)")
 
-    if not selected:
-        st.info("카테고리를 1개 이상 선택하세요.")
+    can_run = (selected if (is_broad or is_direct) else query_text)
+    if not can_run:
+        st.info("입력을 채우세요.")
         return
 
     if st.button("🎯 대량 소싱 리스트 생성", type="primary",
                  width="stretch", key="gen_bulk"):
-        with st.spinner(f"{len(selected)} 카테고리 처리 중..."):
-            if is_spark:
+        with st.spinner("처리 중..."):
+            if is_broad:
                 res = bulk_sourcing.spark_category_list(selected)
-            else:
-                res = bulk_sourcing.bulk_sourcing_list(
-                    selected, n_per_cat=n_per_cat)
+            elif is_direct:
+                res = bulk_sourcing.bulk_sourcing_list(selected,
+                                                       n_per_cat=n_per_cat)
+            else:  # is_target or is_custom
+                res = bulk_sourcing.spark_query_list(query_text,
+                                                     n_variations=n_var)
             path = sourcing_report.write_sourcing_report(
                 res, shop_name=st.session_state.get("shop_name_selected"))
         st.session_state["bulk_res"] = res

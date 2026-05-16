@@ -113,6 +113,46 @@ def bulk_sourcing_list(categories: list[str],
     )
 
 
+_QUERY_MODIFIERS = ("", "ideas", "set", "kit", "accessories", "for kids",
+                    "for adults", "decor", "essentials", "best", "premium",
+                    "with storage")
+
+
+def spark_query_list(query: str, n_variations: int = 8) -> SourcingResult:
+    """Spark URLs for a single user-typed query (e.g. ``"reading nook"``).
+
+    Routes ``query`` through :func:`modules.dataset_lookup.map_category` to
+    find the matching HF dataset category and its Amazon browse node, then
+    emits ``n_variations`` keyword variations of the query — each becomes
+    one Spark search URL focused on **this one niche**.
+    """
+    q = (query or "").strip()
+    if not q:
+        return SourcingResult(category="(empty query)", rows=(), n_subs=0,
+                              n_variants=0, total=0,
+                              summary="키워드를 입력하세요.")
+    hf_cat = dataset_lookup.map_category(q)
+    node = spark_urls.HF_TO_BROWSE_NODE.get(hf_cat or "", "")
+    n = max(3, min(int(n_variations), len(_QUERY_MODIFIERS)))
+    rows: list[SourcingRow] = []
+    for mod in _QUERY_MODIFIERS[:n]:
+        kw = f"{q} {mod}".strip() if mod else q
+        rows.append(SourcingRow(
+            subcategory=q, base_product=kw, variant="", brand="",
+            keyword=kw, est_price=0.0,
+            amazon_node_id=node, asin="", review_count=0,
+        ))
+    summary = (
+        f"'{q}' 타겟 Spark URL — {len(rows)}개 키워드 변형. "
+        f"매핑 HF 카테고리: {hf_cat or '미매핑 (일반 검색 URL)'}. "
+        f"노드: {node or 'n/a'}. Spark가 URL당 ~수백 상품 페이지네이션 수확."
+    )
+    return SourcingResult(
+        category=f"Spark targeted: {q}", rows=tuple(rows),
+        n_subs=1, n_variants=1, total=len(rows), summary=summary,
+    )
+
+
 def spark_category_list(categories: list[str]) -> SourcingResult:
     """Spark-native broad-search rows — one per (HF category × keyword seed).
 
