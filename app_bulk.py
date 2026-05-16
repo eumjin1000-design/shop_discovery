@@ -29,26 +29,33 @@ def render_bulk_sourcing_section() -> None:
         "리뷰 ASIN을 직접 추출합니다. Spark 일괄 입력용 .txt 동시 생성."
     )
 
-    if not dataset_lookup.db_available():
-        st.warning("⚠️ 로컬 데이터셋 인덱스가 없습니다. "
-                   "`python scripts/build_dataset_index.py --all` 실행 후 사용하세요.")
-        return
+    # Spark broad mode needs only the code-side HF_TO_BROWSE_NODE +
+    # HF_BROAD_KEYWORDS constants — no SQLite. Direct ASIN mode requires the
+    # 1GB SQLite index (built locally via scripts/build_dataset_index.py),
+    # which is git-ignored and therefore absent on Streamlit Cloud.
+    db_ready = dataset_lookup.db_available()
+    cats_db = dataset_lookup.list_categories() if db_ready else []
+    cats_spark = sorted(spark_urls.HF_TO_BROWSE_NODE.keys())
+    if not db_ready:
+        st.info("ℹ️ Streamlit Cloud는 SQLite 인덱스 없이 작동 — **Spark 카테고리 "
+                "URL 모드만 사용 가능**합니다 (5만+ ASIN 목표에 정확). "
+                "직접 ASIN 모드는 로컬에서 `python scripts/build_dataset_index.py "
+                "--all` 실행 후 사용하세요.")
 
-    cats = dataset_lookup.list_categories()
-    if not cats:
-        st.warning("⚠️ 인덱스에 카테고리가 없습니다.")
-        return
-
-    mode = st.radio(
-        "출력 모드",
-        ["🎯 Spark 카테고리 URL (브로드, 추천)",
-         "📦 직접 ASIN URL (53K /dp/ + 검색 확장)"],
-        index=0, key="bulk_mode", horizontal=True,
-        help="Spark 카테고리 URL = PDF 가이드(11/24) 형식. URL당 수백~수천 "
-             "상품 수확 (6h ≈ 900). 직접 ASIN URL = 매행이 특정 베스트셀러, "
-             "Spark 수확량 적음.",
-    )
-    is_spark = mode.startswith("🎯")
+    if db_ready:
+        mode = st.radio(
+            "출력 모드",
+            ["🎯 Spark 카테고리 URL (브로드, 추천)",
+             "📦 직접 ASIN URL (53K /dp/ + 검색 확장)"],
+            index=0, key="bulk_mode", horizontal=True,
+            help="Spark 카테고리 URL = PDF 가이드(11/24) 형식. URL당 수백~수천 "
+                 "상품 수확 (6h ≈ 900). 직접 ASIN URL = 매행이 특정 베스트셀러, "
+                 "Spark 수확량 적음.",
+        )
+        is_spark = mode.startswith("🎯")
+    else:
+        is_spark = True
+    cats = cats_db if (db_ready and not is_spark) else cats_spark
 
     selected = st.multiselect(
         "카테고리 선택 (Ctrl/Shift 다중 선택)", cats,
