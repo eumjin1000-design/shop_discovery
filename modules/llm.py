@@ -160,35 +160,71 @@ def ask_json(prompt: str, *, tier: str = "fast", max_tokens: int = 1024) -> Opti
 def _extract_json(text: str) -> Optional[Any]:
     """Extract JSON from LLM text. Handles:
     1. Markdown code fences (with or without closing ``` — truncated responses)
-    2. Prose-wrapped JSON (LLM says "Here's the JSON: [...]")
-    3. Truncated arrays (recover last complete element + close bracket)
+    2. Prose-wrapped JSON ("Here's the JSON: [...]")
+    3. Truncated arrays — tries 3 repair strategies, returns partial list
+       (even one recovered element beats falling back to template).
     """
+    original_len = len(text)
     text = text.strip()
-    # Strip opening fence (with or without closing — truncated responses).
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*\n?", "", text)
         text = re.sub(r"\n?```\s*$", "", text).strip()
-    # Try direct parse.
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # Find first array or object.
     match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
     if match:
         try:
             return json.loads(match.group(1))
         except json.JSONDecodeError:
             pass
-    # Truncation repair: array cut mid-element. Find last complete `},`
-    # and close the array. Yields a partial-but-valid list instead of None.
-    if text.lstrip().startswith("["):
-        body = text.lstrip()
-        last = max(body.rfind("},"), body.rfind("} ,"))
-        if last > 0:
-            repaired = body[:last + 1] + "]"
-            try:
-                return json.loads(repaired)
-            except json.JSONDecodeError:
-                pass
+    repaired = _repair_truncated_array(text)
+    if repaired is not None:
+        return repaired
+    print(f"[LLM][json] all strategies failed (text_len={original_len}, "
+          f"starts={text[:40]!r}, ends={text[-40:]!r})", flush=True)
     return None
+
+
+def _repair_truncated_array(text: str) -> Optional[Any]:
+    """Recover partial JSON array from a truncated LLM response.
+
+    Strategy: walk from the start tracking bracket depth and string state;
+    keep the longest prefix that ends right after a top-level array element.
+    Far more robust than rfind on ``,`` because it handles strings
+    containing ``,`` and nested objects/arrays correctly.
+    """
+    body = text.lstrip()
+    if not body.startswith("["):
+        return None
+    depth = 0
+    in_str = False
+    esc = False
+    last_good = -1   # index right after the last completed top-level element
+    for i, ch in enumerate(body):
+        if esc:
+            esc = False
+            continue
+        if ch == "\\" and in_str:
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in "[{":
+            depth += 1
+        elif ch in "]}":
+            depth -= 1
+            if depth == 1 and ch == "}":
+                # closed a top-level element (depth went 2->1 inside array)
+                last_good = i + 1
+    if last_good <= 1:
+        return None
+    repaired = body[:last_good] + "]"
+    try:
+        return json.loads(repaired)
+    except json.JSONDecodeError:
+        return None
