@@ -13,7 +13,7 @@ import streamlit as st
 
 import app_go_tools
 import app_spark_ui as spark_ui
-from modules import batch_report, report_gen
+from modules import batch_report, category_ko, report_gen
 from modules.models import PipelineResult
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
@@ -165,13 +165,16 @@ def render_batch(rows: list[dict]) -> None:
         return
     rows = sorted(rows, key=lambda r: r.get("total", 0), reverse=True)
     top = rows[0]
+    top_ko = category_ko.translate(top["name"])
     st.success(
-        f"🏆 **1위 추천: {top['name']}** — {top['total']:.1f}/100 "
+        f"🏆 **1위 추천: {top['name']}** ({top_ko}) — {top['total']:.1f}/100 "
         f"({top['decision']}). 아래 입력창에 채워두었습니다.  ·  누적 {len(rows)}개 분석됨"
     )
     table = []
     for rank, r in enumerate(rows, start=1):
-        entry = {"순위": rank, "카테고리": r["name"], "총점": round(r["total"], 1), "판정": r["decision"]}
+        entry = {"순위": rank, "카테고리(EN)": r["name"],
+                 "카테고리(한글)": category_ko.translate(r["name"]),
+                 "총점": round(r["total"], 1), "판정": r["decision"]}
         for bn, sc, _mx in r["breakdown"]:
             entry[bn] = round(sc, 1)
         table.append(entry)
