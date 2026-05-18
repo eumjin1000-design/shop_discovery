@@ -13,7 +13,7 @@ import streamlit as st
 
 import app_go_tools
 import app_spark_ui as spark_ui
-from modules import batch_report, category_ko, report_gen
+from modules import batch_report, category_ko, ranking_modes, report_gen
 from modules.models import PipelineResult
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
@@ -160,21 +160,39 @@ def pipeline_rows(results: list[tuple[str, PipelineResult]]) -> list[dict]:
 
 
 def render_batch(rows: list[dict]) -> None:
-    """Ranking table + top pick + Excel download for batch results (row form)."""
+    """Ranking table + top pick + Excel download (광고/무광고 2개 순위)."""
     if not rows:
         return
+    noad_ranks = ranking_modes.rank_by_no_ad(rows)
     rows = sorted(rows, key=lambda r: r.get("total", 0), reverse=True)
-    top = rows[0]
-    top_ko = category_ko.translate(top["name"])
-    st.success(
-        f"🏆 **1위 추천: {top['name']}** ({top_ko}) — {top['total']:.1f}/100 "
-        f"({top['decision']}). 아래 입력창에 채워두었습니다.  ·  누적 {len(rows)}개 분석됨"
-    )
+    top_ad = rows[0]
+    top_noad = max(rows, key=lambda r: ranking_modes.no_ad_score(r["breakdown"]))
+    top_ad_ko = category_ko.translate(top_ad["name"])
+    top_noad_ko = category_ko.translate(top_noad["name"])
+    top_noad_score = ranking_modes.no_ad_score(top_noad["breakdown"])
+    if top_ad["name"] == top_noad["name"]:
+        st.success(
+            f"🏆 **1위 (광고·무광고 공통): {top_ad['name']}** ({top_ad_ko}) — "
+            f"광고 {top_ad['total']:.1f} / 무광고 {top_noad_score:.1f} "
+            f"({top_ad['decision']}) · 누적 {len(rows)}개 분석됨"
+        )
+    else:
+        st.success(
+            f"🏆 **광고 1위**: {top_ad['name']} ({top_ad_ko}) — {top_ad['total']:.1f}  \n"
+            f"🌱 **무광고 1위**: {top_noad['name']} ({top_noad_ko}) — "
+            f"{top_noad_score:.1f}  · 누적 {len(rows)}개 분석됨"
+        )
     table = []
     for rank, r in enumerate(rows, start=1):
-        entry = {"순위": rank, "카테고리(EN)": r["name"],
-                 "카테고리(한글)": category_ko.translate(r["name"]),
-                 "총점": round(r["total"], 1), "판정": r["decision"]}
+        entry = {
+            "광고순위": rank,
+            "무광고순위": noad_ranks.get(r["name"], "-"),
+            "카테고리(EN)": r["name"],
+            "카테고리(한글)": category_ko.translate(r["name"]),
+            "광고 총점": round(r["total"], 1),
+            "무광고 총점": ranking_modes.no_ad_score(r["breakdown"]),
+            "판정": r["decision"],
+        }
         for bn, sc, _mx in r["breakdown"]:
             entry[bn] = round(sc, 1)
         table.append(entry)
