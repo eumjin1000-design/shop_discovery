@@ -158,18 +158,37 @@ def ask_json(prompt: str, *, tier: str = "fast", max_tokens: int = 1024) -> Opti
 
 
 def _extract_json(text: str) -> Optional[Any]:
+    """Extract JSON from LLM text. Handles:
+    1. Markdown code fences (with or without closing ``` — truncated responses)
+    2. Prose-wrapped JSON (LLM says "Here's the JSON: [...]")
+    3. Truncated arrays (recover last complete element + close bracket)
+    """
     text = text.strip()
-    fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
-    if fenced:
-        text = fenced.group(1).strip()
+    # Strip opening fence (with or without closing — truncated responses).
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*\n?", "", text)
+        text = re.sub(r"\n?```\s*$", "", text).strip()
+    # Try direct parse.
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
+    # Find first array or object.
+    match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
     if match:
         try:
             return json.loads(match.group(1))
         except json.JSONDecodeError:
-            return None
+            pass
+    # Truncation repair: array cut mid-element. Find last complete `},`
+    # and close the array. Yields a partial-but-valid list instead of None.
+    if text.lstrip().startswith("["):
+        body = text.lstrip()
+        last = max(body.rfind("},"), body.rfind("} ,"))
+        if last > 0:
+            repaired = body[:last + 1] + "]"
+            try:
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
     return None
