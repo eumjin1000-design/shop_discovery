@@ -32,6 +32,34 @@ const DOMAIN_US = 1;
 const TIMEOUT_MS = 30_000;
 const KEEPA_BATCH = 100;          // Keepa allows up to 100 ASIN per request
 const PRODUCT_BSR_MAX = 50_000;   // validateKeywordsWithKeepa filter
+const BACKOFF_MIN_TOKENS = 5;     // matches Python modules.keepa_status
+
+let _lastTokenCheck = 0;
+let _lastTokenValue = null;
+
+/**
+ * Live token check via the free /token endpoint. Cached for 15s so a tight
+ * loop over many gems doesn't hammer the endpoint.
+ *
+ * @returns {Promise<number|null>} tokensLeft, or null on error/missing key.
+ */
+export async function getTokensLeft() {
+  if (Date.now() - _lastTokenCheck < 15_000 && _lastTokenValue !== null) {
+    return _lastTokenValue;
+  }
+  try {
+    const key = String(process.env.KEEPA_API_KEY || '').trim();
+    if (!key || key.startsWith('여기에')) return null;
+    const r = await axios.get(`${BASE}/token`, {
+      params: { key }, timeout: 10_000,
+    });
+    _lastTokenValue = Number(r.data?.tokensLeft ?? 0);
+    _lastTokenCheck = Date.now();
+    return _lastTokenValue;
+  } catch {
+    return null;
+  }
+}
 
 function getKey() {
   const k = String(process.env.KEEPA_API_KEY || '').trim();
@@ -186,6 +214,18 @@ function _normalizeProduct(p) {
 export async function validateKeywordsWithKeepa(gems) {
   const list = Array.isArray(gems) ? gems : [];
   const out = [];
+  // Auto-backoff: if token bucket is already below threshold, skip the
+  // whole pass and return gems with empty amazon_products[] so the caller
+  // can still render without crashing.
+  const tokens = await getTokensLeft();
+  if (tokens !== null && tokens < BACKOFF_MIN_TOKENS) {
+    console.warn(
+      `[keepa-validator] auto-backoff: tokensLeft=${tokens} < ` +
+      `${BACKOFF_MIN_TOKENS}; skipping Keepa validation`
+    );
+    for (const gem of list) out.push({ ...gem, amazon_products: [] });
+    return out;
+  }
   for (const gem of list) {
     const asins = await searchKeepaByKeyword(gem.keyword, 10);
     const products = await validateProductsByASIN(asins);

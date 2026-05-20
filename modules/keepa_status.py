@@ -7,17 +7,33 @@ every Streamlit rerun.
 
 Public surface
 --------------
-* :func:`get_token_status` — single JSON-ready dict for the UI.
+* :func:`get_token_status`     — single JSON-ready dict for the UI.
+* :func:`should_use_keepa`     — backoff guard: ``False`` when tokens
+                                  are below ``min_tokens`` (default 5).
+                                  Callers must check this before any
+                                  paid Keepa operation.
+* :func:`load_token_history`   — sliding-window history for the sidebar
+                                  chart. Persisted to a gitignored JSON
+                                  file under the project root.
 """
 from __future__ import annotations
 
+import json
 import os
+import time
+from pathlib import Path
 from typing import Any, Optional
 
 import requests
 
 _ENDPOINT = "https://api.keepa.com/token"
 _TIMEOUT = 5.0
+
+# History is persisted as a flat JSON list of {ts, tokensLeft, refillRate}.
+# Capped at HISTORY_MAX entries (~2 hours @ 30s polling cadence).
+_DATA_DIR = Path(__file__).resolve().parent.parent
+_HISTORY_FILE = _DATA_DIR / "keepa_token_history.json"
+HISTORY_MAX = 240
 
 
 def _get_key() -> Optional[str]:
@@ -59,7 +75,7 @@ def get_token_status() -> Optional[dict[str, Any]]:
     refill_ms = int(data.get("refillIn", 0) or 0)
 
     color, label = _classify(tokens)
-    return {
+    status = {
         "available": True,
         "tokensLeft": tokens,
         "refillRate": rate,
@@ -69,6 +85,55 @@ def get_token_status() -> Optional[dict[str, Any]]:
         "label": label,
         "error": None,
     }
+    _append_history(status)
+    return status
+
+
+def should_use_keepa(min_tokens: int = 5) -> bool:
+    """Backoff guard — call this BEFORE a paid Keepa operation.
+
+    Returns ``False`` when:
+      - No KEEPA_API_KEY configured
+      - /token poll fails (network/HTTP error)
+      - Live token balance < ``min_tokens``
+
+    Uses an uncached poll so the decision reflects the current bucket
+    (the UI's 30-second status cache is too stale for this purpose). The
+    call itself is free — Keepa does not charge for /token requests.
+    """
+    status = get_token_status()
+    if status is None or not status.get("available"):
+        return False
+    return int(status.get("tokensLeft", 0)) >= int(min_tokens)
+
+
+def load_token_history(limit: int = HISTORY_MAX) -> list[dict[str, Any]]:
+    """Return up to ``limit`` most-recent history rows (oldest → newest)."""
+    try:
+        with _HISTORY_FILE.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return data[-int(limit):] if limit else data
+
+
+def _append_history(status: dict[str, Any]) -> None:
+    rows = load_token_history(limit=HISTORY_MAX)
+    rows.append({
+        "ts": int(time.time()),
+        "tokensLeft": int(status.get("tokensLeft", 0)),
+        "refillRate": int(status.get("refillRate", 0)),
+    })
+    # Cap at HISTORY_MAX so the file never grows without bound.
+    if len(rows) > HISTORY_MAX:
+        rows = rows[-HISTORY_MAX:]
+    try:
+        with _HISTORY_FILE.open("w", encoding="utf-8") as fh:
+            json.dump(rows, fh)
+    except OSError:
+        pass
 
 
 def _classify(tokens: int) -> tuple[str, str]:

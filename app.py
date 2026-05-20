@@ -24,6 +24,7 @@ except ImportError:
     pass
 
 import app_catalog_ui as catalog
+import app_keepa_ui
 import app_render as ui
 from main import run_categories, run_pipeline
 from modules import categories, llm, verdict_ai
@@ -82,6 +83,7 @@ st.markdown(
 )
 
 ui.render_header(llm.provider_label(), llm.any_available())
+app_keepa_ui.render_sidebar()
 
 st.session_state.setdefault("category_input", "")
 
