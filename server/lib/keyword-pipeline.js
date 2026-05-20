@@ -15,6 +15,7 @@
 import { suggestKeywords } from "./google-suggest.js";
 import { getKeywordData } from "./google-ads-api.js";
 import { get as cacheGet, set as cacheSet } from "./keyword-cache.js";
+import { validateKeywordsWithKeepa } from "./keepa-validator.js";
 
 const ADS_BATCH_SIZE = 20; // generateKeywordIdeas hard cap per request
 const GEM_MAX_KD = 30;
@@ -24,9 +25,12 @@ const GEMS_TOP_N = 50;
 /**
  * @param {string[]} seeds   base queries (1..N)
  * @param {object}   options
- * @param {string}   options.geo    default "US"
- * @param {string}   options.lang   default "en"
- * @param {boolean}  options.cache  default true — flip to false to force API
+ * @param {string}   options.geo                  default "US"
+ * @param {string}   options.lang                 default "en"
+ * @param {boolean}  options.cache                default true (false = force API)
+ * @param {boolean}  options.validate_with_keepa  default false — when true,
+ *                   each gem is enriched with `amazon_products[]` via Keepa
+ *                   (live BSR ≤ 50,000 Amazon products).
  * @returns {Promise<{gems, all, metadata}>}
  */
 export async function researchKeywords(seeds, options = {}) {
@@ -112,10 +116,23 @@ export async function researchKeywords(seeds, options = {}) {
   }
 
   // 7. Sort + filter gems.
-  const gems = all
+  let gems = all
     .filter((r) => r.kd <= GEM_MAX_KD && r.volume >= GEM_MIN_VOLUME)
     .sort((a, b) => b.score - a.score)
     .slice(0, GEMS_TOP_N);
+
+  // 7b. Optional: enrich each gem with live Amazon products via Keepa.
+  let keepa_validated = false;
+  if (options.validate_with_keepa === true) {
+    try {
+      gems = await validateKeywordsWithKeepa(gems);
+      keepa_validated = true;
+    } catch (err) {
+      console.warn(
+        `[keyword-pipeline] Keepa validation skipped (${err.code || "?"}): ${err.message}`
+      );
+    }
+  }
 
   // 8. Done.
   return {
@@ -126,6 +143,7 @@ export async function researchKeywords(seeds, options = {}) {
       cached_count: Object.keys(cachedRows).length,
       api_calls: apiCalls,
       gem_count: gems.length,
+      keepa_validated,
       elapsed_ms: Date.now() - start,
     },
   };
