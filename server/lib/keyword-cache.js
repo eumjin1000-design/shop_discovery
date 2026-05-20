@@ -51,11 +51,14 @@ export function configure({ dbPath } = {}) {
 
 /**
  * @param {string} keyword
- * @param {string} geo  default "US"
- * @param {string} lang default "en"
+ * @param {string} geo       default "US"
+ * @param {string} lang      default "en"
+ * @param {number} maxAgeMs  freshness window, default 30d. Pass a shorter
+ *                           value (e.g. 24h) for fast-moving data like
+ *                           Keepa product prices.
  * @returns parsed cached value (any JSON) or null when missing/expired.
  */
-export function get(keyword, geo = "US", lang = "en") {
+export function get(keyword, geo = "US", lang = "en", maxAgeMs = TTL_MS) {
   const db = getDb();
   const row = db
     .prepare(
@@ -64,7 +67,7 @@ export function get(keyword, geo = "US", lang = "en") {
     )
     .get(String(keyword), String(geo), String(lang));
   if (!row) return null;
-  if (Date.now() - Number(row.fetched_at) > TTL_MS) return null;
+  if (Date.now() - Number(row.fetched_at) > maxAgeMs) return null;
   try {
     return JSON.parse(row.data);
   } catch {

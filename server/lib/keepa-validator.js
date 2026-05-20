@@ -26,12 +26,14 @@
  */
 import axios from 'axios';
 import 'dotenv/config';
+import { get as cacheGet, set as cacheSet } from './keyword-cache.js';
 
 const BASE = 'https://api.keepa.com';
 const DOMAIN_US = 1;
 const TIMEOUT_MS = 30_000;
 const KEEPA_BATCH = 100;          // Keepa allows up to 100 ASIN per request
 const PRODUCT_BSR_MAX = 50_000;   // validateKeywordsWithKeepa filter
+const PRODUCT_TTL_MS = 24 * 60 * 60 * 1000;  // 24h cache for ASIN product data
 const BACKOFF_MIN_TOKENS = 5;     // matches Python modules.keepa_status
 
 let _lastTokenCheck = 0;
@@ -132,9 +134,18 @@ export async function validateProductsByASIN(asins) {
   );
   if (list.length === 0) return [];
 
+  // Cache lookup: ASIN product data is cached 24h under (asin, ASIN, keepa).
+  // Repeat lookups within the window cost 0 Keepa tokens.
   const out = [];
-  for (let i = 0; i < list.length; i += KEEPA_BATCH) {
-    const slice = list.slice(i, i + KEEPA_BATCH);
+  const misses = [];
+  for (const asin of list) {
+    const hit = cacheGet(asin, 'ASIN', 'keepa', PRODUCT_TTL_MS);
+    if (hit && typeof hit === 'object' && hit.asin) out.push(hit);
+    else misses.push(asin);
+  }
+
+  for (let i = 0; i < misses.length; i += KEEPA_BATCH) {
+    const slice = misses.slice(i, i + KEEPA_BATCH);
     let data;
     try {
       const res = await axios.get(`${BASE}/product`, {
@@ -153,7 +164,11 @@ export async function validateProductsByASIN(asins) {
       continue;
     }
     const products = Array.isArray(data?.products) ? data.products : [];
-    for (const p of products) out.push(_normalizeProduct(p));
+    for (const p of products) {
+      const row = _normalizeProduct(p);
+      if (row.asin) cacheSet(row.asin, 'ASIN', 'keepa', row);  // persist 24h
+      out.push(row);
+    }
   }
   return out;
 }

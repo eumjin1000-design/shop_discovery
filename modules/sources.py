@@ -2,13 +2,9 @@
 Amazon BSR / ratings (Keepa). Everything degrades to ``None`` on any failure so
 callers fall back to mock data.
 
-Environment variables
----------------------
-    KW_EVERYWHERE_API_KEY   - Keywords Everywhere (search volume + trend)
-    KEEPA_API_KEY           - Keepa (Amazon sales rank, rating, review count)
-
-A value that is empty or still the .env placeholder ("여기에...") counts as
-"not configured".
+Env: KW_EVERYWHERE_API_KEY (search volume), KEEPA_API_KEY (BSR/rating).
+A value that is empty or still the .env placeholder ("여기에...") = "not set".
+Keepa results are disk-cached (modules.keepa_cache, 24h) so repeats cost 0.
 """
 from __future__ import annotations
 
@@ -137,18 +133,20 @@ def keepa_snapshot(category: str) -> Optional[dict]:
     with: best_rank, median_rank, sampled_products, competing_listings,
     avg_rating, reviews_analyzed.
 
-    Token backoff: if Keepa balance is below the per-snapshot threshold
-    (~25 tokens for best_sellers_query + product batch), returns ``None``
-    so the caller falls back to mock data. Threshold is conservative — a
-    full snapshot can cost 30-60 tokens depending on category size.
+    Disk cache (24h) + token backoff (<20 → mock). Disk cache survives
+    Streamlit Cloud restarts so a repeat category costs 0 tokens.
     """
     key = _env("KEEPA_API_KEY")
     if not key:
         return None
     if category in _KEEPA_CACHE:
         return _KEEPA_CACHE[category]
-    from . import keepa_status
-    if not keepa_status.should_use_keepa(min_tokens=25):
+    from . import keepa_cache, keepa_status
+    disk = keepa_cache.get(f"snapshot::{category}")
+    if disk is not None:
+        _KEEPA_CACHE[category] = disk
+        return disk
+    if not keepa_status.should_use_keepa(min_tokens=20):
         _KEEPA_CACHE[category] = None
         return None
 
@@ -162,11 +160,12 @@ def keepa_snapshot(category: str) -> Optional[dict]:
             raise RuntimeError("no matching Keepa category")
 
         asins = api.best_sellers_query(cat_id, domain="US") or []
-        asins = list(asins)[:20]
+        asins = list(asins)[:15]  # 15 vs 20 samples → ~25% fewer tokens
         if not asins:
             raise RuntimeError("no best sellers returned")
 
-        products = api.query(asins, domain="US", stats=90, rating=1, history=False) or []
+        # stats=30 (was 90): only current[] is read, so 30d window suffices.
+        products = api.query(asins, domain="US", stats=30, rating=1, history=False) or []
         ranks: list[int] = []
         ratings: list[float] = []
         reviews: list[int] = []
@@ -204,6 +203,8 @@ def keepa_snapshot(category: str) -> Optional[dict]:
 
     snapshot = _with_timeout(_do_call)
     _KEEPA_CACHE[category] = snapshot
+    if snapshot is not None:                       # cache successes only
+        keepa_cache.set(f"snapshot::{category}", snapshot)
     return snapshot
 
 
@@ -220,10 +221,12 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
     cache_key = f"{category}::{n}"
     if cache_key in _KEEPA_ASINS_CACHE:
         return _KEEPA_ASINS_CACHE[cache_key]
-    # Token backoff: best_sellers_query + N product fetches can run 30-80
-    # tokens. Require headroom proportional to N (3 tokens/ASIN heuristic).
-    from . import keepa_status
-    needed = max(20, n * 3)
+    from . import keepa_cache, keepa_status
+    disk = keepa_cache.get(f"topasins::{cache_key}")
+    if disk is not None:
+        _KEEPA_ASINS_CACHE[cache_key] = disk
+        return disk
+    needed = max(20, n * 3)  # ~3 tokens/ASIN headroom for backoff
     if not keepa_status.should_use_keepa(min_tokens=needed):
         _KEEPA_ASINS_CACHE[cache_key] = None
         return None
@@ -240,7 +243,7 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
         if not asins:
             raise RuntimeError("no best sellers returned")
 
-        products = api.query(asins, domain="US", stats=90, rating=1, history=False) or []
+        products = api.query(asins, domain="US", stats=30, rating=1, history=False) or []
         out: list[dict] = []
         for p in products:
             asin = str(p.get("asin") or "").strip().upper()
@@ -272,6 +275,8 @@ def keepa_top_asins(category: str, n: int = 30) -> Optional[list[dict]]:
 
     result = _with_timeout(_do_call)
     _KEEPA_ASINS_CACHE[cache_key] = result
+    if result is not None:                         # cache successes only
+        keepa_cache.set(f"topasins::{cache_key}", result)
     return result
 
 

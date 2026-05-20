@@ -6,6 +6,7 @@ generated_categories.json
 analysis_history.json
 batch_results.json
 keepa_token_history.json
+keepa_data_cache.json
 *.bak.json
 icon_preview.png
 
