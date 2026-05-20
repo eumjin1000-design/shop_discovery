@@ -134,28 +134,41 @@ function _normalizeProduct(p) {
   const stats = p?.stats || {};
   const current = Array.isArray(stats.current) ? stats.current : [];
   const avg30 = Array.isArray(stats.avg30) ? stats.avg30 : [];
-  const imageCsv = String(p?.imagesCSV || '').trim();
-  const firstImage = imageCsv ? imageCsv.split(',')[0] : '';
 
-  // Keepa stores prices in cents and ratings × 10. Negative values mean
-  // "no data" so we treat them as 0.
-  const price = current[0] && current[0] > 0 ? current[0] / 100 : 0;
-  const priceAvg = avg30[0] && avg30[0] > 0 ? avg30[0] / 100 : 0;
-  const reviews = current[16] && current[16] > 0 ? Number(current[16]) : 0;
-  const rating = current[18] && current[18] > 0 ? Number(current[18]) / 10 : 0;
+  // Keepa: -1 means "no data". Amazon (idx 0) is often -1 for 3P-only
+  // products, so fall back to New marketplace price (idx 1).
+  const priceCents = current[0] > 0 ? current[0] : current[1] > 0 ? current[1] : 0;
+  const priceAvgCents = avg30[0] > 0 ? avg30[0] : avg30[1] > 0 ? avg30[1] : 0;
+  const bsrRaw = current[3];
+  const bsr = Number.isFinite(bsrRaw) && bsrRaw > 0 ? bsrRaw : null;
+  const ratingRaw = current[16];
+  const rating = ratingRaw > 0 ? ratingRaw / 10 : 0;
+  const reviewsRaw = current[17];
+  const reviews = reviewsRaw > 0 ? Number(reviewsRaw) : 0;
+
+  // Image: prefer imagesCSV (Amazon-hosted thumbnail key), fall back to
+  // the structured images[] array's large variant.
+  const imageCsv = String(p?.imagesCSV || '').trim();
+  let imageUrl = null;
+  if (imageCsv) {
+    const first = imageCsv.split(',')[0];
+    if (first) imageUrl = `https://images-na.ssl-images-amazon.com/images/I/${first}`;
+  } else if (Array.isArray(p?.images) && p.images[0]) {
+    const img = p.images[0];
+    const key = img.l || img.m || img.s;
+    if (key) imageUrl = `https://images-na.ssl-images-amazon.com/images/I/${key}`;
+  }
 
   return {
     asin: p?.asin || '',
     title: String(p?.title || '').trim(),
     brand: String(p?.brand || '').trim(),
-    bsr: stats.salesRankReference || null,
-    current_price: Number(price.toFixed(2)),
-    avg_price_30d: Number(priceAvg.toFixed(2)),
+    bsr,
+    current_price: Number((priceCents / 100).toFixed(2)),
+    avg_price_30d: Number((priceAvgCents / 100).toFixed(2)),
     review_count: reviews,
     rating: Number(rating.toFixed(1)),
-    image: firstImage
-      ? `https://images-na.ssl-images-amazon.com/images/I/${firstImage}`
-      : null,
+    image: imageUrl,
   };
 }
 
