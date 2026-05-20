@@ -13,8 +13,14 @@ import streamlit as st
 
 import app_go_tools
 import app_spark_ui as spark_ui
-from modules import batch_report, category_ko, ranking_modes, report_gen
+from modules import batch_report, category_ko, keepa_status, ranking_modes, report_gen
 from modules.models import PipelineResult
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _keepa_status_cached() -> dict | None:
+    """Streamlit reruns frequently; cache the Keepa /token poll for 30s."""
+    return keepa_status.get_token_status()
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
 DECISION_EMOJI = {"GO": "✅", "WATCH": "🟡", "NO-GO": "⛔"}
@@ -47,7 +53,7 @@ def ko(name: str) -> str:
 
 
 def render_header(provider_label: str, llm_on: bool) -> None:
-    """Left: 🐙 logo + subtitle. Right: Gemini+Claude (or mock) badge."""
+    """Left: 🐙 logo + subtitle. Right: stacked LLM + Keepa badges."""
     badge_bg, badge_fg, icon = (("#ede7f6", "#5e35b1", "🤖") if llm_on
                                 else ("#f5f5f5", "#999999", "⚠️"))
     st.markdown(
@@ -59,12 +65,46 @@ def render_header(provider_label: str, llm_on: bool) -> None:
             <div style="color:#777;font-size:13px;margin-top:3px">
               드랍쇼핑 신규 샵 발굴 자동화 — 카테고리 → Go/No-Go 판정 → Excel 리포트</div>
           </div>
-          <div style="background:{badge_bg};color:{badge_fg};border-radius:18px;
-                      padding:6px 14px;font-size:12.5px;font-weight:700;white-space:nowrap">
-            {icon} {provider_label}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <div style="background:{badge_bg};color:{badge_fg};border-radius:18px;
+                        padding:6px 14px;font-size:12.5px;font-weight:700;white-space:nowrap">
+              {icon} {provider_label}</div>
+            {_keepa_badge_html()}
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _keepa_badge_html() -> str:
+    """Render the Keepa token badge or a placeholder if no key configured."""
+    status = _keepa_status_cached()
+    if status is None:
+        return (
+            '<div style="background:#f5f5f5;color:#999;border-radius:18px;'
+            'padding:6px 14px;font-size:12.5px;font-weight:700;white-space:nowrap">'
+            '🪙 Keepa: 미설정</div>'
+        )
+    color = status.get("color", "#999")
+    if not status.get("available"):
+        text = f"🪙 Keepa: 조회 실패 ({status.get('error') or '?'})"
+    else:
+        tokens = status["tokensLeft"]
+        rate = status["refillRate"]
+        next_secs = status["next_refill_secs"]
+        label = status["label"]
+        text = (
+            f"🪙 Keepa Pro · {tokens} 토큰 · {label} "
+            f"(+1/{60 // rate if rate else '?'}초, 다음 {next_secs}s)"
+            if rate else
+            f"🪙 Keepa Pro · {tokens} 토큰 · {label}"
+        )
+    return (
+        f'<div style="background:#fff;color:{color};border:1px solid {color};'
+        f'border-radius:18px;padding:6px 14px;font-size:12.5px;font-weight:700;'
+        f'white-space:nowrap" title="배지 클릭 후 페이지 새로고침 = 강제 갱신">'
+        f'{text}</div>'
     )
 
 
