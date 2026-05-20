@@ -126,6 +126,10 @@ with st.expander(f"📋 카테고리 {_n}개 — 선정 기준 / 분석 이력 (
         width="stretch", hide_index=True,
     )
 
+# Pre-execution Keepa token warning for the full-batch action.
+from modules import keepa_status as _ks
+app_keepa_ui.preflight_banner(_ks.estimate_analysis_cost(_n), f"전체 {_n}개 자동 분석")
+
 # 3) Button row: 🎲 랜덤 추천 (outline, left)  ·  ▷ 전체 N개 자동 분석 (red, right)
 _b_left, _b_right = st.columns([1, 1])
 if _b_left.button("🎲 랜덤 추천", width="stretch", type="secondary", key="rand_pick"):
@@ -148,6 +152,7 @@ if st.session_state.get("batch_rows"):
 
 st.divider()
 
+app_keepa_ui.preflight_banner(_ks.COST_PER_CATEGORY, "단일 분석")
 with st.form("discovery"):
     st.text_input("분석할 카테고리", key="category_input",
                   placeholder="직접 입력하거나 위에서 선택 / 랜덤 추천 (예: wireless earbuds)")

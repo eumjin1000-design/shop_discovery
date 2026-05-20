@@ -59,6 +59,43 @@ def badge_html() -> str:
     )
 
 
+def preflight_banner(estimated_tokens: int, operation: str) -> None:
+    """Show a pre-execution token banner above a Keepa-consuming action.
+
+    Non-blocking — purely informational. The actual protection is the
+    auto-backoff in modules.sources (which silently falls back to mock when
+    tokens run low). This banner just lets the user *see* it coming so they
+    can wait for refill if they want real data instead of mock.
+
+    No-ops when Keepa isn't configured (mock mode = no token concern).
+    """
+    status = status_cached()
+    if status is None or not status.get("available"):
+        return  # no key / poll failed → all-mock path, nothing to warn about
+
+    tokens = int(status["tokensLeft"])
+    rate = int(status["refillRate"]) or 1
+    est = int(estimated_tokens)
+
+    if tokens >= est:
+        st.success(
+            f"✅ **{operation}** 예상 ~{est} 토큰 · 현재 {tokens} 토큰 — 충분 "
+            f"(실 Keepa 데이터 사용)"
+        )
+        return
+
+    shortfall = est - tokens
+    wait_min = shortfall / rate  # tokens needed ÷ tokens/min
+    st.warning(
+        f"⚠️ **{operation}** 예상 ~{est} 토큰 · 현재 {tokens} 토큰 "
+        f"(**{shortfall} 토큰 부족**)\n\n"
+        f"지금 실행하면 부족분은 **mock 데이터로 자동 폴백**됩니다. "
+        f"실 Keepa 데이터를 원하면 **~{wait_min:.0f}분** 후 재시도하세요 "
+        f"(충전 {rate} 토큰/분).",
+        icon="⚠️",
+    )
+
+
 def render_sidebar() -> None:
     """Sidebar panel: current state + 1-hour history chart + backoff status."""
     with st.sidebar:

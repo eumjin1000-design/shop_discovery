@@ -108,6 +108,9 @@ def _sourcing_preview_and_dl(res: sourcing.SourcingResult, path: str) -> None:
 
 def _sourcing_block(category: str) -> None:
     st.markdown("**📦 소싱 리스트 자동 생성** — 서브카테고리 × 상품 × 변형 × 페이지 (Amazon 노드·Prime·리뷰순 URL, Spark 수집용)")
+    import app_keepa_ui
+    from modules import keepa_status as _ks
+    app_keepa_ui.preflight_banner(_ks.COST_PER_SOURCING, "소싱 리스트 (REAL_PRODUCTS)")
     n_subs, n_vars, n_pages, n_passes, verify_urls = _sourcing_controls()
     if st.button("📦 소싱 리스트 생성", key="gen_sourcing"):
         spinner_text = ("생성 + URL 검증 중..." if verify_urls else

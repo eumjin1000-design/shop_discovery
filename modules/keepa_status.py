@@ -29,6 +29,18 @@ import requests
 _ENDPOINT = "https://api.keepa.com/token"
 _TIMEOUT = 5.0
 
+# Per-operation token-cost estimates (conservative upper bounds). Used by the
+# UI to warn before a Keepa-consuming action. A single keepa_snapshot runs
+# best_sellers_query (~1) + ~20 product fetches (~1-2 each) = ~25-50; we use
+# 35 as a safe middle. Sourcing's keepa_top_asins is similar.
+COST_PER_CATEGORY = 35   # single category analysis (keepa_snapshot)
+COST_PER_SOURCING = 35   # sourcing list REAL_PRODUCTS block (keepa_top_asins)
+
+
+def estimate_analysis_cost(n_categories: int) -> int:
+    """Estimated Keepa tokens for analysing ``n_categories``."""
+    return max(0, int(n_categories)) * COST_PER_CATEGORY
+
 # History is persisted as a flat JSON list of {ts, tokensLeft, refillRate}.
 # Capped at HISTORY_MAX entries (~2 hours @ 30s polling cadence).
 _DATA_DIR = Path(__file__).resolve().parent.parent
