@@ -20,3 +20,13 @@ hf_cache/
 # Playwright + test artifacts
 .playwright-mcp/
 test_*.png
+
+# Node.js side-modules (server/lib/*.js)
+node_modules/
+seo-cache.db
+seo-cache.db-shm
+seo-cache.db-wal
+tmp-cache-*.db
+tmp-cache-*.db-shm
+tmp-cache-*.db-wal
+package-lock.json
