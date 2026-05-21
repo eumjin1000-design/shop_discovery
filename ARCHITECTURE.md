@@ -10,9 +10,10 @@
 
 **드랍쇼핑 신규 샵 발굴 자동화 도구.** 카테고리 입력 → 7단계 분석 파이프라인 → 100점 Go/No-Go 판정 → Excel 리포트 + Spark 스크래퍼용 .txt 생성.
 
-- 진입점 2개: CLI (`main.py`) + Streamlit GUI (`app.py`)
+- 진입점 3개: CLI (`main.py`) + Streamlit GUI (`app.py`) + Node.js HTTP API (`server/index.js`)
 - 호스팅: 로컬 PC + Streamlit Cloud
 - 외부 도구 연동: Spark 스크래퍼(Electron 앱), spark_collector(별도 Node.js 도구)
+- **Node.js 키워드 리서치 시스템** (Step 1-5): Google 검색량 우선 샵 선정 → Keepa 제품 소싱. 22번 섹션 참조.
 
 ---
 
@@ -59,6 +60,9 @@
 | `app_bulk.py` | 181 | 대량 소싱 모드 UI (4-way radio) |
 | `app_targeted_spark.py` | 95 | 🎯 이 카테고리 Spark URL 섹션 |
 | `app_spark_ui.py` | - | Spark 임포트/병합 섹션 |
+| `app_keepa_ui.py` | 158 | Keepa 배지 + 사이드바 토큰 모니터 + preflight 경고 |
+| `app_keyword_research.py` | 194 | 키워드 리서치 페이지 (Node API 클라이언트) |
+| `pages/1_🔍_키워드_리서치.py` | 21 | Streamlit 멀티페이지 래퍼 |
 | `main.py` | - | CLI + run_pipeline/run_categories/run_all_curated |
 | `make_icon.py` | - | Pillow로 데스크탑 아이콘 생성 (일회성) |
 
@@ -96,6 +100,21 @@
 | `dataset_categories.py` | - | HF 카테고리 키워드 매핑 |
 | `dataset_verify.py` | - | ASIN GET-stream 검증 (404/CAPTCHA 제거) |
 | `spark_import.py` | - | Spark 출력 .csv 임포트 |
+| `keepa_status.py` | 172 | Keepa /token 폴링 + should_use_keepa 백오프 + 이력 + 비용추정 |
+| `keepa_cache.py` | 71 | Keepa 결과 디스크 영속 캐시 (24h TTL, 재시작 생존) |
+
+### Node.js 키워드 리서치 (`server/`)
+
+| 파일 | 줄수 | 역할 |
+|---|---|---|
+| `server/index.js` | 49 | Express 5 서버 엔트리 (/health + 라우터 마운트) |
+| `server/routes/keywords.js` | 140 | POST /research + GET /cache/stats |
+| `server/lib/google-ads-api.js` | ~45 | Google Ads generateKeywordIdeas (volume/KD/CPC) |
+| `server/lib/google-suggest.js` | 98 | Google 무료 autocomplete 키워드 확장 |
+| `server/lib/keyword-cache.js` | 129 | SQLite 키워드/ASIN 캐시 (maxAgeMs 파라미터) |
+| `server/lib/keyword-pipeline.js` | 209 | 8단계 파이프라인 → gems (opportunity 랭킹) |
+| `server/lib/keepa-validator.js` | 253 | Keepa 검색+제품 (24h 캐시 + 백오프) |
+| `server/lib/shop-pipeline.js` | 87 | 2단계: Google 검색량 선정 → Keepa 소싱 |
 
 ### 테스트
 
@@ -466,7 +485,7 @@ fix(llm): 한 줄 요약 (한국어)
 
 ---
 
-## 18. 최근 주요 변경 (2026-05-17 ~ 2026-05-20)
+## 18. 최근 주요 변경 (2026-05-17 ~ 2026-05-21)
 
 | 날짜 | 커밋 | 변경 |
 |---|---|---|
@@ -476,6 +495,10 @@ fix(llm): 한 줄 요약 (한국어)
 | 05-18 | 광고/무광고 2개 순위 | ranking_modes.py 신규 (NO_AD_WEIGHTS) |
 | 05-18 | JSON 파서 강화 | `_repair_truncated_array` (bracket depth tracker) |
 | 05-18 | spark_collector | 별도 Node.js 도구 신규 (외부 디렉토리) |
+| 05-20 | Keepa 토큰 UI | 헤더 배지 + 사이드바 모니터 + 자동 백오프 + preflight 경고 |
+| 05-20 | Keepa 토큰 최적화 | 디스크 캐시(24h) + stats=30 + 샘플 15 → 토큰 40-100% 절감 |
+| 05-20~21 | Node.js 키워드 시스템 | Step 1-5: Google Ads + Suggest + 캐시 + Keepa + 2단계 파이프라인 + HTTP API |
+| 05-21 | 키워드 리서치 GUI | Streamlit 멀티페이지 탭 (Node API 클라이언트) |
 
 ---
 
@@ -504,6 +527,95 @@ fix(llm): 한 줄 요약 (한국어)
 - Cloud 배포 중: `shopdiscovery-w4vh6puhwewxiqfv9ksouj.streamlit.app`
 - 깃 저장소: `eumjin1000-design/shop_discovery`
 - Claude 크레딧 $100 활용 중 (Claude-first tier 설정)
+- 전략 결정: **Google 검색량 = 샵 선정 메인 기준**, Keepa = 제품 소싱 보조 (최소 사용)
+- Google Ads Basic Access 신청 완료 (2026-05-20, 1-3일 승인 대기)
+
+---
+
+## 22. Node.js 키워드 리서치 시스템 (Step 1-5)
+
+별도 Node.js 스택. 사용자 전략(Google 검색량 우선)을 코드화한 2단계 워크플로우.
+
+### 데이터 흐름
+
+```
+[HTTP API] POST /api/keywords/research        ← Step 5 (Express)
+     ↓
+[오케스트레이터] shop-pipeline.discoverShop    ← Step 4
+     │
+     ├─ [1단계] Google 검색량 → 샵 선정
+     │    keyword-pipeline.researchKeywords    ← Step 2
+     │      ├─ google-suggest (시드 확장)
+     │      ├─ google-ads-api (volume/KD)      ← Step 1
+     │      └─ keyword-cache (SQLite, 30d)     ← Step 1
+     │    → gems = opportunity(volume/(KD+1)) 랭킹
+     │
+     └─ [2단계] 선정 샵 → Keepa 제품 소싱 (top-N gems만)
+          keepa-validator.validateKeywordsWithKeepa  ← Step 3
+            └─ ASIN 24h 캐시 + 토큰 백오프(<5)
+          → 각 gem에 amazon_products[] (BSR≤50k)
+```
+
+### HTTP API (`server/`)
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `GET /health` | liveness |
+| `POST /api/keywords/research` | seeds → gems(+Keepa). body: `{seeds, market, language, validate_with_keepa, top_n}` |
+| `GET /api/keywords/cache/stats` | 캐시 hit_rate |
+
+응답 envelope: `{success, data}` / `{success:false, error, code}`.
+에러 코드: `VALIDATION_ERROR`(400) · `TIMEOUT`(504) · `INTERNAL_ERROR`(500).
+
+### gems 기준
+
+- opportunity_score = volume / (KD + 1)
+- gem 필터: **KD ≤ 30 AND volume ≥ 1000** (상위 50개)
+- KD 배지: ≤30 💎 / ≤60 ⭐ / >60 🔴
+
+### 실행
+
+```bash
+npm run serve          # node server/index.js → http://localhost:8787
+node test-step5.js     # API 통합 테스트
+```
+
+### .env (Node.js 추가 키)
+
+```
+GOOGLE_ADS_DEVELOPER_TOKEN     # Google Ads (Basic Access 필요)
+GOOGLE_ADS_CLIENT_ID
+GOOGLE_ADS_CLIENT_SECRET
+GOOGLE_ADS_REFRESH_TOKEN
+GOOGLE_ADS_CUSTOMER_ID
+GOOGLE_ADS_LOGIN_CUSTOMER_ID
+KEYWORD_API_BASE               # Streamlit→Node API 베이스 (기본 localhost:8787)
+```
+
+### 영속 파일 (gitignored)
+
+```
+seo-cache.db              SQLite 키워드/ASIN 캐시
+keepa_data_cache.json     Keepa 결과 디스크 캐시 (Python측)
+keepa_token_history.json  토큰 이력 (사이드바 차트)
+node_modules/             (package-lock.json도 무시)
+```
+
+### 알려진 제약
+
+- **Google Ads Basic Access 승인 전**: volume=0, gems 비어있음. 승인 시 자동 활성.
+- **localhost API**: Streamlit Cloud는 localhost:8787 도달 불가 → 키워드 리서치 페이지는 **로컬 전용**. Cloud에선 ConnectionError 안내 메시지.
+- **Keepa 1 token/min** (Pro): 백오프 + 캐시로 최소 사용. 자세한 운영은 21번.
+
+### 검증 상태 (2026-05-21)
+
+| 항목 | 결과 |
+|---|---|
+| Step 1-5 구조 | ✅ 전부 작동 |
+| Suggest 확장 | ✅ (Google Ads 없이도) |
+| Google Ads volume | ⏳ Basic Access 승인 대기 (volume=0) |
+| Keepa 소싱 | ✅ (인덱스 검증 완료, 토큰 한도 내) |
+| HTTP API + GUI | ✅ (로컬, success/total/배너 확인) |
 
 ---
 
