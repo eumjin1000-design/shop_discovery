@@ -70,11 +70,13 @@ def synthesize(
 # Individual scorers
 # --------------------------------------------------------------------------
 def _score_margin(m: MarginResult) -> ScoreLine:
-    # Full marks at >=35% net margin, linear down to 0 at <=0%.
-    pts = round(clamp(m.net_margin_pct / 0.35) * 35.0, 1)
+    # Category reverse-calc gross margin → points (40%+ full, 20% failing).
+    # Curve lives in margin_calc.margin_score so it stays with the margin domain.
+    from .margin_calc import margin_score
+    pts = margin_score(m.net_margin_pct)
     return ScoreLine(
         "Margin / unit economics", pts, 35.0,
-        f"net margin {m.net_margin_pct*100:.0f}% ({m.net_margin} per unit)",
+        f"gross margin {m.net_margin_pct*100:.0f}% ({m.net_margin} per unit)",
     )
 
 
