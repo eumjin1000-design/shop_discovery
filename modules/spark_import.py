@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from dataclasses import replace
 
 from .sourcing import SourcingResult
@@ -32,10 +33,41 @@ _COLUMN_MAP = {
 
 
 def _money_to_float(value: str) -> float:
-    try:
-        return round(float(str(value).replace("$", "").replace(",", "").strip()), 2)
-    except (TypeError, ValueError):
+    """Strip every currency symbol/word (``$``, ``KRW``, ``€``, spaces,
+    commas) keeping only digits and a decimal point.
+
+    Defensive heuristic: a cleaned value > 1000 is almost certainly a
+    non-USD currency (e.g. a KRW price that leaked from a Korean locale),
+    so it is roughly converted to USD by dividing by 1400
+    (``60249 → ~43.03``). Dropshipping unit prices rarely exceed $1000, so
+    the false-positive risk is acceptable; the real fix is forcing a USD
+    locale at the Spark scrape step.
+    """
+    cleaned = re.sub(r"[^\d.]", "", str(value))
+    if not cleaned:
         return 0.0
+    try:
+        amount = float(cleaned)
+    except ValueError:
+        return 0.0
+    if amount > 1000:
+        amount /= 1400.0
+    return round(amount, 2)
+
+
+def _rank_to_int(value: str) -> int:
+    """Extract the rank number from a sales-rank string.
+
+    ``"#1,234 in Bed Pillows"`` / ``"3 in Home & Kitchen"`` → ``1234`` / ``3``.
+    Returns 0 when no leading number is present.
+    """
+    match = re.search(r"([\d,]+)", str(value))
+    if not match:
+        return 0
+    try:
+        return int(match.group(1).replace(",", ""))
+    except ValueError:
+        return 0
 
 
 def _to_float(value: str) -> float:
@@ -88,6 +120,8 @@ def parse_spark_csv(file_path) -> list[dict]:
                 row[key] = _to_float(value)
             elif key == "review_count":
                 row[key] = _to_int(value)
+            elif key == "sales_rank":
+                row[key] = _rank_to_int(value)
             else:
                 row[key] = value
         if row:
