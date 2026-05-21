@@ -120,8 +120,10 @@ if _current is not None:
 
 with st.expander(f"📋 카테고리 {_n}개 — 선정 기준 / 분석 이력 (표 보기)"):
     st.dataframe(
-        [{"카테고리": c.name, "마진": "★" * c.margin, "수요": "★" * c.demand,
-          "경쟁여유": "★" * c.competition,
+        [{"카테고리": c.name,
+          "가치": "★" * getattr(c, "perceived_value", 0),
+          "해결": "★" * getattr(c, "problem_solving", 0),
+          "틈새": "★" * getattr(c, "niche_specificity", 0),
           "분석": _dec_map.get(c.name) or "—", "선정 이유": c.reason}
          for c in _cats],
         width="stretch", hide_index=True,

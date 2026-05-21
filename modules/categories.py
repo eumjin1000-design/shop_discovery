@@ -46,11 +46,14 @@ def _coerce(item: dict) -> CuratedCategory | None:
         except (TypeError, ValueError):
             return 2
 
+    # New intrinsic-quality axes. ``.get`` with rate() fallback also migrates
+    # legacy JSON written under the old margin/demand/competition keys (those
+    # keys are simply ignored; missing new keys default to 2).
     return CuratedCategory(
         name=str(item["name"]).strip(),
-        margin=rate(item.get("margin")),
-        demand=rate(item.get("demand")),
-        competition=rate(item.get("competition")),
+        perceived_value=rate(item.get("perceived_value")),
+        problem_solving=rate(item.get("problem_solving")),
+        niche_specificity=rate(item.get("niche_specificity")),
         reason=str(item.get("reason", "")).strip() or "AI 추천 트렌딩 카테고리.",
         age=str(item.get("age", "")).strip()[:20],
     )
@@ -253,16 +256,29 @@ def generate_new_categories(n: int = 20, replace: bool = False,
     )
     prompt = (
         "You are a dropshipping market analyst. List "
-        f"{n} CURRENTLY TRENDING dropshipping product categories suitable for a "
+        f"{n} CURRENTLY TRENDING dropshipping product ideas suitable for a "
         "brand-new store. Do NOT include any of these already-used categories "
-        f"(case-insensitive): {sorted(exclude)}." + age_clause + " For each "
-        "category rate `margin`, `demand`, `competition` on a 1-3 scale where "
-        "3 is most favorable (competition: 3 = least crowded). Give a "
-        "one-line Korean `reason` referencing margin/demand/competition. "
+        f"(case-insensitive): {sorted(exclude)}." + age_clause +
+        " HARD CONSTRAINTS — every idea MUST satisfy all of these:\n"
+        "1. Physically small, light (low volumetric weight), and NOT fragile "
+        "(no breakage/glass/liquid-spill risk) — cheap and safe to ship.\n"
+        "2. A specific 3-depth MICRO-NICHE that solves a clear, concrete "
+        "problem — NOT a broad top-level category. "
+        'Bad (too broad): "kitchen gadgets". '
+        'Good (micro-niche): "anti-slip silicone trivet for hot pots".\n'
+        " For each idea rate three INTRINSIC product axes on a 1-3 scale "
+        "(3 = best):\n"
+        "- `perceived_value`: how much value the buyer perceives vs. unit cost "
+        "(premium feel, low price resistance).\n"
+        "- `problem_solving`: how clearly it solves a concrete problem.\n"
+        "- `niche_specificity`: how tight/specific the micro-niche is "
+        "(3 = sharp 3-depth niche, 1 = broad commodity).\n"
+        " Give a one-line Korean `reason` referencing those three axes. "
         'Also include `age` (e.g. "25-34" or "40-60") — primary US buyer age. '
         "Return ONLY a JSON array: "
-        '[{"name": "<English>", "margin": 1-3, "demand": 1-3, '
-        '"competition": 1-3, "reason": "<Korean>", "age": "<range>"}]. No prose.'
+        '[{"name": "<English>", "perceived_value": 1-3, "problem_solving": 1-3, '
+        '"niche_specificity": 1-3, "reason": "<Korean>", "age": "<range>"}]. '
+        "No prose."
     )
     data = ask_json(prompt, max_tokens=2048)
     if not isinstance(data, list):

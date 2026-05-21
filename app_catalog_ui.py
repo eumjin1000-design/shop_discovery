@@ -60,9 +60,15 @@ def _card_html(cat, emoji: str, decision: str | None, selected: bool) -> str:
     # Show real margin/demand stars only once analysed; an unanalysed card
     # would otherwise display arbitrary seed stars that read as a verdict.
     if decision:
+        # getattr fallback (default 0 → ☆☆☆) keeps legacy objects that predate
+        # the perceived_value/problem_solving/niche_specificity schema from
+        # crashing the grid.
+        pv = getattr(cat, "perceived_value", 0)
+        ps = getattr(cat, "problem_solving", 0)
+        ns = getattr(cat, "niche_specificity", 0)
         stats_line = (
-            f'<div style="font-size:12px;color:#666;text-align:center;margin-top:6px">'
-            f'마진 {_stars(cat.margin)}&nbsp;&nbsp;·&nbsp;&nbsp;수요 {_stars(cat.demand)}</div>'
+            f'<div style="font-size:11.5px;color:#666;text-align:center;margin-top:6px">'
+            f'가치 {_stars(pv)}&nbsp;·&nbsp;해결 {_stars(ps)}&nbsp;·&nbsp;틈새 {_stars(ns)}</div>'
         )
     else:
         stats_line = (
