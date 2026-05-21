@@ -57,14 +57,25 @@ def _card_html(cat, emoji: str, decision: str | None, selected: bool) -> str:
         f'border-radius:10px;padding:1px 8px;display:inline-block;margin-top:4px">'
         f'🎯 {getattr(cat, "age", "")}</div>' if getattr(cat, "age", "") else ""
     )
+    # Show real margin/demand stars only once analysed; an unanalysed card
+    # would otherwise display arbitrary seed stars that read as a verdict.
+    if decision:
+        stats_line = (
+            f'<div style="font-size:12px;color:#666;text-align:center;margin-top:6px">'
+            f'마진 {_stars(cat.margin)}&nbsp;&nbsp;·&nbsp;&nbsp;수요 {_stars(cat.demand)}</div>'
+        )
+    else:
+        stats_line = (
+            '<div style="font-size:12px;color:#999;text-align:center;margin-top:6px">'
+            '⏳ 분석 대기 중</div>'
+        )
     return (
         f'<div style="border:{border};background:{bg};border-radius:14px;padding:13px 14px 10px;'
         f'box-shadow:{shadow};min-height:152px">'
         f'<div style="display:flex;justify-content:flex-end;height:18px">{_badge(decision)}</div>'
         f'<div style="font-size:46px;text-align:center;line-height:1;margin:1px 0 8px">{emoji}</div>'
         f'<div style="font-weight:700;font-size:13.5px;line-height:1.3;text-align:center;min-height:34px">{cat.name}</div>'
-        f'<div style="font-size:12px;color:#666;text-align:center;margin-top:6px">'
-        f'마진 {_stars(cat.margin)}&nbsp;&nbsp;·&nbsp;&nbsp;수요 {_stars(cat.demand)}</div>'
+        f'{stats_line}'
         f'<div style="text-align:center">{age_badge}</div>'
         f'</div>'
     )

@@ -59,6 +59,19 @@ def badge_html() -> str:
     )
 
 
+def mock_fallback_expected(estimated_tokens: int) -> bool:
+    """True only when Keepa IS configured but tokens are short of the estimate.
+
+    Returns False when Keepa is unconfigured/unreachable — that is the normal
+    all-mock mode, not an accidental fallback, so callers should not warn or
+    disable on it.
+    """
+    status = status_cached()
+    if status is None or not status.get("available"):
+        return False
+    return int(status["tokensLeft"]) < int(estimated_tokens)
+
+
 def preflight_banner(estimated_tokens: int, operation: str) -> None:
     """Show a pre-execution token banner above a Keepa-consuming action.
 

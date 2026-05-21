@@ -129,7 +129,15 @@ with st.expander(f"📋 카테고리 {_n}개 — 선정 기준 / 분석 이력 (
 
 # Pre-execution Keepa token warning for the full-batch action.
 from modules import keepa_status as _ks
-app_keepa_ui.preflight_banner(_ks.estimate_analysis_cost(_n), f"전체 {_n}개 자동 분석")
+_batch_cost = _ks.estimate_analysis_cost(_n)
+app_keepa_ui.preflight_banner(_batch_cost, f"전체 {_n}개 자동 분석")
+st.caption("💡 24시간 이내 분석한 카테고리는 캐시가 적용되어 토큰이 소모되지 않습니다.")
+
+# Mock-fallback safety: when Keepa is configured but tokens are short, relabel
+# the red full-batch button so the user knowingly opts into mock data.
+_batch_mock = app_keepa_ui.mock_fallback_expected(_batch_cost)
+_batch_label = (f"⚠️ 전체 {_n}개 분석 (Mock 포함 강제 진행)" if _batch_mock
+                else f"▷ 전체 {_n}개 자동 분석")
 
 # 3) Button row: 🎲 랜덤 추천 (outline, left)  ·  ▷ 전체 N개 자동 분석 (red, right)
 _b_left, _b_right = st.columns([1, 1])
@@ -138,7 +146,7 @@ if _b_left.button("🎲 랜덤 추천", width="stretch", type="secondary", key="
     st.session_state["category_input"] = _rc.name
     st.toast(f"🎲 추천: {_rc.name}")
     st.rerun()
-if _b_right.button(f"▷ 전체 {_n}개 자동 분석", width="stretch", type="primary", key="batch_all"):
+if _b_right.button(_batch_label, width="stretch", type="primary", key="batch_all"):
     _run_batch([c.name for c in _cats], "전체")
 
 with st.expander("⏳ 10개 단위로 나눠 분석 (부분 배치)"):
@@ -155,6 +163,7 @@ st.divider()
 
 app_backup_ui.render_backup_section()
 app_keepa_ui.preflight_banner(_ks.COST_PER_CATEGORY, "단일 분석")
+st.caption("💡 24시간 이내 분석한 카테고리는 캐시가 적용되어 토큰이 소모되지 않습니다.")
 with st.form("discovery"):
     st.text_input("분석할 카테고리", key="category_input",
                   placeholder="직접 입력하거나 위에서 선택 / 랜덤 추천 (예: wireless earbuds)")
