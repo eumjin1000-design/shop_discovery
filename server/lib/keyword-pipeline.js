@@ -13,9 +13,25 @@
  *   8. Return { gems[], all[], metadata }.
  */
 import { suggestKeywords } from "./google-suggest.js";
-import { getKeywordData } from "./google-ads-api.js";
 import { get as cacheGet, set as cacheSet } from "./keyword-cache.js";
 import { validateKeywordsWithKeepa } from "./keepa-validator.js";
+
+/**
+ * Keyword-metrics data source selector. RapidAPI (Google Keyword Insight)
+ * works instantly without Google Ads Basic Access, so it's preferred when
+ * RAPIDAPI_KEY is set; otherwise fall back to the Google Ads API (which
+ * needs Basic Access approval). Both return the same row shape.
+ */
+async function fetchKeywordData(keywords, geo, lang) {
+  if (process.env.RAPIDAPI_KEY) {
+    const { getKeywordDataViaRapidAPI } = await import("./rapidapi-keywords.js");
+    return await getKeywordDataViaRapidAPI(keywords, geo, lang);
+  }
+  const { getKeywordData } = await import("./google-ads-api.js");
+  return await getKeywordData(keywords, geo, lang);
+}
+
+const DATA_SOURCE = process.env.RAPIDAPI_KEY ? "rapidapi" : "google_ads";
 
 const ADS_BATCH_SIZE = 20; // generateKeywordIdeas hard cap per request
 const GEM_MAX_KD = 30;
@@ -76,7 +92,7 @@ export async function researchKeywords(seeds, options = {}) {
 
     let rows = [];
     try {
-      rows = (await getKeywordData(batch, geo, lang)) || [];
+      rows = (await fetchKeywordData(batch, geo, lang)) || [];
     } catch (err) {
       // Explorer token / quota / auth / network all funnel here. Pipeline
       // continues with zero-filled rows so downstream code is uniform.
@@ -107,12 +123,22 @@ export async function researchKeywords(seeds, options = {}) {
   }
 
   // 6. Merge cached + fresh, compute opportunity score.
+  // RapidAPI expands one seed into ~100-300 keywords, so freshRows often
+  // contains far more than `master`. Include those extras as candidates
+  // (they already carry real volume/KD) so the expansion isn't wasted.
+  const seenAll = new Set();
   const all = [];
   for (const kw of master) {
     const key = kw.toLowerCase();
     const row = cachedRows[key] || freshRows[key] || _zeroRow(kw);
+    seenAll.add(key);
     const score = _opportunityScore(row.volume, row.kd);
     all.push({ ...row, keyword: row.keyword || kw, score });
+  }
+  for (const key of Object.keys(freshRows)) {
+    if (seenAll.has(key)) continue;
+    const row = freshRows[key];
+    all.push({ ...row, score: _opportunityScore(row.volume, row.kd) });
   }
 
   // 7. Sort + filter gems.
@@ -144,6 +170,7 @@ export async function researchKeywords(seeds, options = {}) {
       api_calls: apiCalls,
       gem_count: gems.length,
       keepa_validated,
+      data_source: DATA_SOURCE,
       elapsed_ms: Date.now() - start,
     },
   };
