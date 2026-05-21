@@ -126,6 +126,46 @@ def has_backup() -> bool:
 
 
 # --------------------------------------------------------------------------
+# Full-state export / import — survives Streamlit Cloud REDEPLOYS.
+# The per-feature JSON files are gitignored, so a fresh Cloud container can
+# lose them on a new deploy. export_all_state() bundles everything into one
+# JSON the user downloads; import_all_state() restores it after any update.
+# --------------------------------------------------------------------------
+def export_all_state() -> dict:
+    """Bundle every persisted file into one JSON-serialisable dict."""
+    import time
+    return {
+        "version": 1,
+        "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "generated_categories": _read_json(_GEN_FILE, None),
+        "analysis_history": _read_json(_HISTORY_FILE, None),
+        "batch_results": _read_json(_BATCH_FILE, None),
+        "generated_categories_bak": _read_json(_GEN_BAK, None),
+        "analysis_history_bak": _read_json(_HISTORY_BAK, None),
+    }
+
+
+def import_all_state(data: dict) -> bool:
+    """Restore every file from an export_all_state() bundle. False if invalid."""
+    if not isinstance(data, dict) or "version" not in data:
+        return False
+    mapping = {
+        "generated_categories": _GEN_FILE,
+        "analysis_history": _HISTORY_FILE,
+        "batch_results": _BATCH_FILE,
+        "generated_categories_bak": _GEN_BAK,
+        "analysis_history_bak": _HISTORY_BAK,
+    }
+    wrote = False
+    for key, path in mapping.items():
+        value = data.get(key)
+        if value is not None:
+            _write_json(path, value)
+            wrote = True
+    return wrote
+
+
+# --------------------------------------------------------------------------
 # Batch ranking results — persisted so partial runs survive an app restart
 # --------------------------------------------------------------------------
 def save_batch_results(rows: list[dict]) -> None:

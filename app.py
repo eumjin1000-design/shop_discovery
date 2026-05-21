@@ -23,6 +23,7 @@ try:
 except ImportError:
     pass
 
+import app_backup_ui
 import app_catalog_ui as catalog
 import app_keepa_ui
 import app_render as ui
@@ -152,6 +153,7 @@ if st.session_state.get("batch_rows"):
 
 st.divider()
 
+app_backup_ui.render_backup_section()
 app_keepa_ui.preflight_banner(_ks.COST_PER_CATEGORY, "단일 분석")
 with st.form("discovery"):
     st.text_input("분석할 카테고리", key="category_input",
