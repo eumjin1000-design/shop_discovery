@@ -47,7 +47,8 @@ def check_bsr(category: str, keywords: tuple[Keyword, ...]) -> BSRResult:
             f"개 경쟁 리스팅 ({sat}). [실데이터: Keepa]"
         )
         return BSRResult(best_rank=best, median_rank=median, sampled_products=sampled,
-                         competing_listings=int(competing), notes=notes)
+                         competing_listings=int(competing),
+                         avg_price=snap.get("avg_price"), notes=notes)
 
     rng = seeded_rng("bsr", category)
     best_rank = rng.randint(50, 6000)

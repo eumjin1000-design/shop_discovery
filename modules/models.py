@@ -61,6 +61,8 @@ class BSRResult:
     sampled_products: int
     # Estimated number of competing listings (proxy for saturation).
     competing_listings: int
+    # Avg Amazon 1st-page price (USD) from Keepa; None when mock/unavailable.
+    avg_price: float | None = None
     notes: str = ""
 
 

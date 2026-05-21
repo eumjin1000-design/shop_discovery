@@ -169,6 +169,7 @@ def keepa_snapshot(category: str) -> Optional[dict]:
         ranks: list[int] = []
         ratings: list[float] = []
         reviews: list[int] = []
+        prices: list[float] = []
         for p in products:
             cur = ((p.get("stats") or {}).get("current")) or []
             if isinstance(cur, list):
@@ -178,6 +179,14 @@ def keepa_snapshot(category: str) -> Optional[dict]:
                     ratings.append(cur[_IDX_RATING] / 10.0)
                 if len(cur) > _IDX_REVIEWS and isinstance(cur[_IDX_REVIEWS], int) and cur[_IDX_REVIEWS] > 0:
                     reviews.append(cur[_IDX_REVIEWS])
+                # Price (cents): Amazon (idx 0), fall back to New (idx 1).
+                cents = None
+                if len(cur) > _IDX_AMAZON and isinstance(cur[_IDX_AMAZON], int) and cur[_IDX_AMAZON] > 0:
+                    cents = cur[_IDX_AMAZON]
+                elif len(cur) > _IDX_NEW and isinstance(cur[_IDX_NEW], int) and cur[_IDX_NEW] > 0:
+                    cents = cur[_IDX_NEW]
+                if cents:
+                    prices.append(cents / 100.0)
 
         comp_listings = None
         try:
@@ -198,6 +207,7 @@ def keepa_snapshot(category: str) -> Optional[dict]:
             "competing_listings": comp_listings,
             "avg_rating": round(statistics.fmean(ratings), 2) if ratings else None,
             "reviews_analyzed": int(statistics.fmean(reviews)) if reviews else None,
+            "avg_price": round(statistics.fmean(prices), 2) if prices else None,
             "category_name": cats.get(cat_id),
         }
 

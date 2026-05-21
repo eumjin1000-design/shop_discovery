@@ -58,7 +58,10 @@ def run_pipeline(category: str, *, target_market: str = "US", currency: str = "U
     bsr = amazon_bsr.check_bsr(category, keywords)
     review = review_miner.mine_reviews(category, keywords)
     intent = intent_check.check_intent(category, keywords)
-    margin = margin_calc.calc_margin(category, currency)
+    # Feed the real Amazon 1st-page avg price (from Keepa via BSR step) into
+    # the margin reverse-calc. None → calc_margin falls back to seed estimate.
+    margin = margin_calc.calc_margin(
+        category, currency, amazon_avg_price=getattr(bsr, "avg_price", None))
     verdict = synthesizer.synthesize(category, trend, bsr, review, intent, margin)
 
     return PipelineResult(
