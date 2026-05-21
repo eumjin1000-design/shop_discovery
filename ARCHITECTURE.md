@@ -109,7 +109,8 @@
 |---|---|---|
 | `server/index.js` | 49 | Express 5 서버 엔트리 (/health + 라우터 마운트) |
 | `server/routes/keywords.js` | 140 | POST /research + GET /cache/stats |
-| `server/lib/google-ads-api.js` | ~45 | Google Ads generateKeywordIdeas (volume/KD/CPC) |
+| `server/lib/rapidapi-keywords.js` | 98 | **RapidAPI Google Keyword Insight (1순위 소스, 즉시 사용)** |
+| `server/lib/google-ads-api.js` | ~45 | Google Ads generateKeywordIdeas (2순위 폴백, Basic Access 필요) |
 | `server/lib/google-suggest.js` | 98 | Google 무료 autocomplete 키워드 확장 |
 | `server/lib/keyword-cache.js` | 129 | SQLite 키워드/ASIN 캐시 (maxAgeMs 파라미터) |
 | `server/lib/keyword-pipeline.js` | 209 | 8단계 파이프라인 → gems (opportunity 랭킹) |
@@ -499,6 +500,9 @@ fix(llm): 한 줄 요약 (한국어)
 | 05-20 | Keepa 토큰 최적화 | 디스크 캐시(24h) + stats=30 + 샘플 15 → 토큰 40-100% 절감 |
 | 05-20~21 | Node.js 키워드 시스템 | Step 1-5: Google Ads + Suggest + 캐시 + Keepa + 2단계 파이프라인 + HTTP API |
 | 05-21 | 키워드 리서치 GUI | Streamlit 멀티페이지 탭 (Node API 클라이언트) |
+| 05-21 | RapidAPI 데이터소스 | rapidapi-keywords.js 신규 (1순위, Basic Access 우회). 무료 월 20회 한도 |
+| 05-21 | 백업/복원 | app_backup_ui.py + export/import_all_state (재배포 생존) |
+| 05-21 | GEMINI.md | Gemini용 전체 시스템 설명서 |
 
 ---
 
@@ -546,9 +550,11 @@ fix(llm): 한 줄 요약 (한국어)
      ├─ [1단계] Google 검색량 → 샵 선정
      │    keyword-pipeline.researchKeywords    ← Step 2
      │      ├─ google-suggest (시드 확장)
-     │      ├─ google-ads-api (volume/KD)      ← Step 1
+     │      ├─ fetchKeywordData (volume/KD):
+     │      │    1순위 rapidapi-keywords (즉시) / 2순위 google-ads-api (Basic 대기)
      │      └─ keyword-cache (SQLite, 30d)     ← Step 1
      │    → gems = opportunity(volume/(KD+1)) 랭킹
+     │      (RapidAPI는 시드 1개→~292개 확장분도 후보 풀에 병합)
      │
      └─ [2단계] 선정 샵 → Keepa 제품 소싱 (top-N gems만)
           keepa-validator.validateKeywordsWithKeepa  ← Step 3
@@ -583,7 +589,9 @@ node test-step5.js     # API 통합 테스트
 ### .env (Node.js 추가 키)
 
 ```
-GOOGLE_ADS_DEVELOPER_TOKEN     # Google Ads (Basic Access 필요)
+RAPIDAPI_KEY                   # RapidAPI Google Keyword Insight (1순위, 즉시)
+RAPIDAPI_KEYWORD_HOST          # google-keyword-insight1.p.rapidapi.com
+GOOGLE_ADS_DEVELOPER_TOKEN     # Google Ads (2순위 폴백, Basic Access 필요)
 GOOGLE_ADS_CLIENT_ID
 GOOGLE_ADS_CLIENT_SECRET
 GOOGLE_ADS_REFRESH_TOKEN
@@ -601,8 +609,23 @@ keepa_token_history.json  토큰 이력 (사이드바 차트)
 node_modules/             (package-lock.json도 무시)
 ```
 
+### 키워드 데이터소스 우선순위 (`fetchKeywordData`)
+
+```
+1순위: RapidAPI Google Keyword Insight (RAPIDAPI_KEY 있으면)
+   - 시드 1개 → ~100-300개 확장 + volume/KD/CPC/trend
+   - Basic Access 불필요 (즉시 사용)
+   - 응답: {text→keyword, volume, competition_index→kd, low_bid, high_bid, trend}
+2순위: Google Ads API (RAPIDAPI_KEY 없을 때)
+   - Basic Access 승인 필요
+metadata.data_source = "rapidapi" / "google_ads"
+```
+
 ### 알려진 제약
 
+- **RapidAPI 무료 BASIC 플랜 = 월 20회 한도**. 소진 시 429 + ~31일 후 리셋.
+  대안: 플랜 업그레이드 / 신규 키 / Google Ads Basic Access 대기.
+  (코드는 검증 완료 — API 정상 도달 확인, 막힌 건 할당량뿐)
 - **Google Ads Basic Access 승인 전**: volume=0, gems 비어있음. 승인 시 자동 활성.
 - **localhost API**: Streamlit Cloud는 localhost:8787 도달 불가 → 키워드 리서치 페이지는 **로컬 전용**. Cloud에선 ConnectionError 안내 메시지.
 - **Keepa 1 token/min** (Pro): 백오프 + 캐시로 최소 사용. 자세한 운영은 21번.
