@@ -19,6 +19,9 @@ NODE_DB: dict[str, str] = {
     "small appliances": "298092", "coffee": "678508011",
     # Home
     "home kitchen": "1055398", "bedding": "3732961", "bath": "3610841", "furniture": "1063306",
+    # Bed Pillows (Home & Kitchen > Bedding > Bed Pillows & Positioners > Bed Pillows).
+    # "memory foam pillow" (3-word) outranks "pillow" so #1 shop maps precisely.
+    "memory foam pillow": "1063252", "pillow": "1063252", "mattress topper": "1063252",
     "storage organization": "3737461", "cleaning supplies": "3760901", "lighting": "495224", "led strip": "495224",
     # Fitness & Sports
     "sports outdoors": "3375251", "exercise fitness": "3407731", "yoga": "3407731",
