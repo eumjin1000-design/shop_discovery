@@ -72,6 +72,17 @@ def mock_fallback_expected(estimated_tokens: int) -> bool:
     return int(status["tokensLeft"]) < int(estimated_tokens)
 
 
+def _fmt_minutes(minutes: float) -> str:
+    """Humanise a minute count: 45 → '약 45분', 140 → '약 2시간 20분'."""
+    m = int(round(minutes))
+    if m < 1:
+        return "1분 이내"
+    if m < 60:
+        return f"약 {m}분"
+    hours, mins = divmod(m, 60)
+    return f"약 {hours}시간 {mins}분" if mins else f"약 {hours}시간"
+
+
 def preflight_banner(estimated_tokens: int, operation: str) -> None:
     """Show a pre-execution token banner above a Keepa-consuming action.
 
@@ -98,13 +109,16 @@ def preflight_banner(estimated_tokens: int, operation: str) -> None:
         return
 
     shortfall = est - tokens
-    wait_min = shortfall / rate  # tokens needed ÷ tokens/min
+    wait = _fmt_minutes(shortfall / rate)  # tokens needed ÷ tokens/min
     st.warning(
         f"⚠️ **{operation}** 예상 ~{est} 토큰 · 현재 {tokens} 토큰 "
-        f"(**{shortfall} 토큰 부족**)\n\n"
-        f"지금 실행하면 부족분은 **mock 데이터로 자동 폴백**됩니다. "
-        f"실 Keepa 데이터를 원하면 **~{wait_min:.0f}분** 후 재시도하세요 "
-        f"(충전 {rate} 토큰/분).",
+        f"(**{shortfall} 토큰 부족** · 충전 {rate} 토큰/분)\n\n"
+        f"기다리면 **{wait}**이면 전부 충전돼 실 Keepa 데이터로 완료됩니다. "
+        f"혹은 아래 **'⏳ 10개 단위로 나눠 분석'**을 선택하면 토큰 한도 안에서 "
+        f"**즉시 시작**할 수 있습니다 (부족분만 mock 폴백).\n\n"
+        f"💡 이전에 분석한 카테고리는 **24시간 캐시**가 적용되어 토큰이 소모되지 "
+        f"않습니다 — **'전체 자동 분석'**을 다시 눌러도 캐시된 카테고리는 토큰을 "
+        f"아낍니다.",
         icon="⚠️",
     )
 
