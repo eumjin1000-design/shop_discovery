@@ -34,13 +34,47 @@ _TIMEOUT = 5.0
 # best_sellers_query (~1) + query of 15 ASINs with stats=30, history=False
 # (~0.5/product, history off → no per-day token surcharge) ≈ 8-10 tokens; we
 # use 10 as a safe estimate. keepa_top_asins shares the same 15-sample path.
-COST_PER_CATEGORY = 10   # single category analysis (keepa_snapshot)
+COST_PER_CATEGORY = 10   # single category analysis (keepa_snapshot, Deep Scan)
 COST_PER_SOURCING = 10   # sourcing list REAL_PRODUCTS block (keepa_top_asins)
+
+# --- Tiered (differential) scan strategy --------------------------------
+# A category's intrinsic score (perceived_value + problem_solving +
+# niche_specificity, each 1-3 → 3..9) decides how many best-seller samples
+# Keepa fetches. High-potential categories earn a Deep Scan; the rest get a
+# cheaper Fast Scan. Token cost is overhead (best_sellers_query ~1) + a
+# per-sample term calibrated so 15 samples ≈ COST_PER_CATEGORY (10).
+DEEP_SCAN_THRESHOLD = 7   # total_score >= 7 → Deep Scan
+DEEP_SCAN_SAMPLES = 15
+FAST_SCAN_SAMPLES = 5
+_SCAN_OVERHEAD = 1.0
+_PER_SAMPLE = (COST_PER_CATEGORY - _SCAN_OVERHEAD) / DEEP_SCAN_SAMPLES  # =0.6
+COST_FAST_SCAN = round(_SCAN_OVERHEAD + FAST_SCAN_SAMPLES * _PER_SAMPLE)  # =4
 
 
 def estimate_analysis_cost(n_categories: int) -> int:
-    """Estimated Keepa tokens for analysing ``n_categories``."""
+    """Estimated Keepa tokens for analysing ``n_categories`` (flat Deep Scan)."""
     return max(0, int(n_categories)) * COST_PER_CATEGORY
+
+
+def scan_mode(total_score: int) -> str:
+    """'deep' when total_score >= DEEP_SCAN_THRESHOLD, else 'fast'."""
+    return "deep" if int(total_score or 0) >= DEEP_SCAN_THRESHOLD else "fast"
+
+
+def samples_for(total_score: int) -> int:
+    """Best-seller sample count for a category's intrinsic ``total_score``."""
+    return DEEP_SCAN_SAMPLES if scan_mode(total_score) == "deep" else FAST_SCAN_SAMPLES
+
+
+def estimate_tiered_cost(high_count: int, low_count: int) -> int:
+    """Estimated tokens under the tiered strategy.
+
+    ``high_count`` Deep-Scan categories (>=7) + ``low_count`` Fast-Scan ones.
+    e.g. (5, 15) → 5×10 + 15×4 = 110 tokens vs. 200 flat (45% saved).
+    """
+    high = max(0, int(high_count))
+    low = max(0, int(low_count))
+    return high * COST_PER_CATEGORY + low * COST_FAST_SCAN
 
 # History is persisted as a flat JSON list of {ts, tokensLeft, refillRate}.
 # Capped at HISTORY_MAX entries (~2 hours @ 30s polling cadence).

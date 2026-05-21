@@ -127,11 +127,16 @@ def trend_signal(trend_values: list[int]) -> Optional[dict]:
 _IDX_AMAZON, _IDX_NEW, _IDX_SALES, _IDX_RATING, _IDX_REVIEWS = 0, 1, 3, 16, 17
 
 
-def keepa_snapshot(category: str) -> Optional[dict]:
+def keepa_snapshot(category: str, sample_size: int = 15) -> Optional[dict]:
     """Best-effort real snapshot for ``category``; ``None`` on failure OR
     10s timeout (Streamlit Cloud sometimes sees Keepa hang). Returns a dict
     with: best_rank, median_rank, sampled_products, competing_listings,
     avg_rating, reviews_analyzed.
+
+    ``sample_size`` is the number of best-seller products fetched — the
+    tiered-scan lever (15 = Deep Scan, 5 = Fast Scan). Fewer samples → fewer
+    Keepa tokens. The cache key includes it so a Fast-Scan (5) result is never
+    served to a Deep-Scan (15) request or vice-versa.
 
     Disk cache (24h) + token backoff (<20 → mock). Disk cache survives
     Streamlit Cloud restarts so a repeat category costs 0 tokens.
@@ -139,15 +144,17 @@ def keepa_snapshot(category: str) -> Optional[dict]:
     key = _env("KEEPA_API_KEY")
     if not key:
         return None
-    if category in _KEEPA_CACHE:
-        return _KEEPA_CACHE[category]
+    sample_size = max(1, int(sample_size))
+    cache_key = f"{category}::{sample_size}"
+    if cache_key in _KEEPA_CACHE:
+        return _KEEPA_CACHE[cache_key]
     from . import keepa_cache, keepa_status
-    disk = keepa_cache.get(f"snapshot::{category}")
+    disk = keepa_cache.get(f"snapshot::{cache_key}")
     if disk is not None:
-        _KEEPA_CACHE[category] = disk
+        _KEEPA_CACHE[cache_key] = disk
         return disk
     if not keepa_status.should_use_keepa(min_tokens=20):
-        _KEEPA_CACHE[category] = None
+        _KEEPA_CACHE[cache_key] = None
         return None
 
     def _do_call() -> Optional[dict]:
@@ -160,7 +167,7 @@ def keepa_snapshot(category: str) -> Optional[dict]:
             raise RuntimeError("no matching Keepa category")
 
         asins = api.best_sellers_query(cat_id, domain="US") or []
-        asins = list(asins)[:15]  # 15 vs 20 samples → ~25% fewer tokens
+        asins = list(asins)[:sample_size]  # tiered: 15 Deep / 5 Fast Scan
         if not asins:
             raise RuntimeError("no best sellers returned")
 
@@ -212,9 +219,9 @@ def keepa_snapshot(category: str) -> Optional[dict]:
         }
 
     snapshot = _with_timeout(_do_call)
-    _KEEPA_CACHE[category] = snapshot
+    _KEEPA_CACHE[cache_key] = snapshot
     if snapshot is not None:                       # cache successes only
-        keepa_cache.set(f"snapshot::{category}", snapshot)
+        keepa_cache.set(f"snapshot::{cache_key}", snapshot)
     return snapshot
 
 

@@ -30,8 +30,24 @@ def _describe(best_rank: int, competing: int) -> tuple[str, str]:
     return demand, sat
 
 
+def _scan_sample_size(category: str) -> int:
+    """Tiered scan: a curated category's intrinsic score
+    (perceived_value + problem_solving + niche_specificity) picks Deep (15)
+    vs Fast (5) sampling. Unknown/ad-hoc categories default to Deep so
+    manually-typed lookups keep full data quality.
+    """
+    from . import categories, keepa_status
+    cat = categories.by_name(category)
+    if cat is None:
+        return keepa_status.DEEP_SCAN_SAMPLES
+    total = (getattr(cat, "perceived_value", 0)
+             + getattr(cat, "problem_solving", 0)
+             + getattr(cat, "niche_specificity", 0))
+    return keepa_status.samples_for(total)
+
+
 def check_bsr(category: str, keywords: tuple[Keyword, ...]) -> BSRResult:
-    snap = sources.keepa_snapshot(category)
+    snap = sources.keepa_snapshot(category, sample_size=_scan_sample_size(category))
     if snap and snap.get("best_rank"):
         best = int(snap["best_rank"])
         median = int(snap.get("median_rank") or best)
