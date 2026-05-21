@@ -5,12 +5,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test:step1": "node test-step1.js"
+    "test:step1": "node test-step1.js",
+    "serve": "node server/index.js"
   },
   "dependencies": {
     "axios": "^1.16.1",
     "better-sqlite3": "^11.5.0",
     "dotenv": "^16.4.5",
+    "express": "^5.2.1",
     "google-ads-api": "^17.1.0"
   },
   "engines": {
