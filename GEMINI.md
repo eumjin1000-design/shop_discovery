@@ -319,7 +319,7 @@ KEYWORD_API_BASE         Streamlit→Node API 베이스 (기본 localhost:8787)
 |---|---|
 | **margin_calc** | 항상 mock (실 소싱가 미연동, 35점 비중이라 실데이터화가 최우선 개선) |
 | **Google Ads API** | Basic Access 승인 대기 (2026-05-20 신청) → RapidAPI로 우회 중 |
-| **RapidAPI** | 무료 티어 rate limit(429) 주의 |
+| **RapidAPI** | 무료 BASIC = **월 20회** 한도. 소진 시 429(~31일 리셋). 신규 키/업그레이드 필요. 코드는 검증 완료 |
 | **Keepa** | Pro 1 token/min — 캐시+백오프로 최소 사용 |
 | **키워드 리서치 페이지** | localhost API라 로컬 전용 (Cloud 미지원) |
 | **HF dataset** | 2023-09 기준, ASIN ~30% 단종 가능 |
