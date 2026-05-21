@@ -15,7 +15,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from modules.spark_import import _money_to_float, _rank_to_int, parse_spark_csv
+from modules.spark_import import (_money_to_float, _rank_to_int,
+                                   _split_images, parse_spark_csv)
 
 _FIXTURE = """상품명,상품코드,가격,별점,리뷰수,판매순위,상태
 "Tempur-Pedic Cloud Pillow",B07CMKX3C7,"$49.99",4.3,"7,412","#3 in Bed Pillows",수집완료
@@ -42,6 +43,49 @@ class TestMoneyToFloat(unittest.TestCase):
     def test_empty_and_garbage(self):
         assert _money_to_float("") == 0.0
         assert _money_to_float("N/A") == 0.0
+
+
+_IMAGE_FIXTURE = """상품명,상품코드,가격,이미지
+"Multi Image Pillow",B07CMKX3C7,"$49.99","http://img1.jpg, http://img2.jpg"
+"Pipe Delimited",B0BX4J3TXT,"$30.00","http://a.jpg|http://b.jpg|http://c.jpg"
+"No Image",B0091J5XCS,"$10.00",""
+"""
+
+
+class TestSplitImages(unittest.TestCase):
+    def test_comma_two_urls(self):
+        assert _split_images("http://img1.jpg, http://img2.jpg") == \
+            ["http://img1.jpg", "http://img2.jpg"]
+
+    def test_pipe_delimited(self):
+        assert _split_images("a.jpg|b.jpg|c.jpg") == ["a.jpg", "b.jpg", "c.jpg"]
+
+    def test_empty_returns_empty_list(self):
+        assert _split_images("") == []
+        assert _split_images(None) == []
+
+
+class TestParseSparkImages(unittest.TestCase):
+    def setUp(self):
+        fd, self.path = tempfile.mkstemp(suffix=".csv")
+        with os.fdopen(fd, "w", encoding="utf-8-sig", newline="") as fh:
+            fh.write(_IMAGE_FIXTURE)
+
+    def tearDown(self):
+        os.remove(self.path)
+
+    def test_images_parsed_as_list_len2(self):
+        rows = parse_spark_csv(self.path)
+        assert rows[0]["images"] == ["http://img1.jpg", "http://img2.jpg"]
+        assert len(rows[0]["images"]) == 2
+
+    def test_pipe_delimited_len3(self):
+        rows = parse_spark_csv(self.path)
+        assert len(rows[1]["images"]) == 3
+
+    def test_missing_image_empty_list(self):
+        rows = parse_spark_csv(self.path)
+        assert rows[2]["images"] == []
 
 
 class TestRankToInt(unittest.TestCase):

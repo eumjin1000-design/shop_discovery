@@ -20,7 +20,9 @@ from dataclasses import replace
 
 from .sourcing import SourcingResult
 
-# Spark CSV header (Korean) -> normalised key.
+# Spark CSV header -> normalised key. Image-column aliases are lowercase;
+# header lookup is case-insensitive (see parse_spark_csv), so "Image",
+# "IMAGE", "이미지" all resolve here.
 _COLUMN_MAP = {
     "상품명": "product_name",
     "상품코드": "asin",
@@ -29,6 +31,10 @@ _COLUMN_MAP = {
     "리뷰수": "review_count",
     "판매순위": "sales_rank",
     "상태": "status",
+    "이미지": "images",
+    "image": "images",
+    "images": "images",
+    "image_url": "images",
 }
 
 
@@ -53,6 +59,18 @@ def _money_to_float(value: str) -> float:
     if amount > 1000:
         amount /= 1400.0
     return round(amount, 2)
+
+
+def _split_images(value: str) -> list[str]:
+    """Split a comma/pipe-delimited image-URL string into a clean list.
+
+    ``"http://a.jpg, http://b.jpg"`` / ``"a.jpg|b.jpg"`` → 2-element list.
+    Empty / missing → ``[]``.
+    """
+    if not value:
+        return []
+    parts = re.split(r"[,|]", str(value))
+    return [p.strip() for p in parts if p.strip()]
 
 
 def _rank_to_int(value: str) -> int:
@@ -110,7 +128,8 @@ def parse_spark_csv(file_path) -> list[dict]:
         for header, value in raw.items():
             if header is None:
                 continue
-            key = _COLUMN_MAP.get(str(header).strip())
+            head = str(header).strip()
+            key = _COLUMN_MAP.get(head) or _COLUMN_MAP.get(head.lower())
             if key is None:
                 continue
             value = (value or "").strip()
@@ -122,6 +141,8 @@ def parse_spark_csv(file_path) -> list[dict]:
                 row[key] = _to_int(value)
             elif key == "sales_rank":
                 row[key] = _rank_to_int(value)
+            elif key == "images":
+                row[key] = _split_images(value)
             else:
                 row[key] = value
         if row:
