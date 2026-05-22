@@ -274,6 +274,17 @@ if result is not None:
         file_name=f"shopcloner_{shopcloner_export._slug(v.category)}.json",
         mime="application/json", width="stretch",
     )
+    # 같은 스키마를 K Beauty Lab식 5섹션 PDF로 — 어떤 샵을 분석하든 범용 제공
+    from modules import seo_schema_pdf
+    try:
+        _seo_pdf = seo_schema_pdf.report_bytes(_schema, category=v.category)
+        st.download_button(
+            "⬇️ SEO 스키마 PDF (ShopCloner 형식)", data=_seo_pdf,
+            file_name=seo_schema_pdf.report_filename(_schema),
+            mime="application/pdf", width="stretch",
+        )
+    except Exception as e:
+        st.caption(f"⚠️ SEO 스키마 PDF 생성 실패: {e}")
     st.caption(
         f"🔗 ShopCloner Phase 2 입력용 · categories {len(_schema['categories'])}개 · "
         f"gem_keywords {len(_schema['gem_keywords'])}개"
