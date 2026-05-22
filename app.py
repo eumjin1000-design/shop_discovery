@@ -247,6 +247,19 @@ if result is not None:
     )
     st.caption(f"리포트는 `output/{fname}` 에도 저장되었습니다.")
 
+    # PDF 리포트 (영문, fpdf2 — 한글 폰트 불필요/Cloud 호환)
+    from modules import pdf_report
+    try:
+        _pdf = pdf_report.report_bytes(
+            result, shop_name=st.session_state.get("shop_name_selected"))
+        st.download_button(
+            "⬇️ PDF 리포트 다운로드", data=_pdf,
+            file_name=pdf_report.report_filename(result),
+            mime="application/pdf", width="stretch",
+        )
+    except Exception as e:  # PDF는 보조 기능 — 실패해도 분석 흐름은 유지
+        st.caption(f"⚠️ PDF 생성 실패: {e}")
+
     # ShopCloner 연동: 분석 결과를 universal-seo-schema JSON으로 내보내 ShopCloner
     # Phase 2(자동 SEO 적용)에 바로 입력. 소싱 리스트가 이미 있으면 그 서브카테고리를
     # categories[]로 재사용하고, 선택된 샵 이름이 있으면 shop_concept.name에 반영.
