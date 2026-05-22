@@ -247,6 +247,25 @@ if result is not None:
     )
     st.caption(f"리포트는 `output/{fname}` 에도 저장되었습니다.")
 
+    # ShopCloner 연동: 분석 결과를 universal-seo-schema JSON으로 내보내 ShopCloner
+    # Phase 2(자동 SEO 적용)에 바로 입력. 소싱 리스트가 이미 있으면 그 서브카테고리를
+    # categories[]로 재사용하고, 선택된 샵 이름이 있으면 shop_concept.name에 반영.
+    from modules import shopcloner_export
+    _sr = (st.session_state.get("sourcing_res")
+           if st.session_state.get("sourcing_cat") == v.category else None)
+    _schema = shopcloner_export.to_universal_schema(
+        result, shop_name=st.session_state.get("shop_name_selected"),
+        sourcing_result=_sr)
+    st.download_button(
+        "⬇️ ShopCloner JSON 내보내기", data=shopcloner_export.schema_json_bytes(_schema),
+        file_name=f"shopcloner_{shopcloner_export._slug(v.category)}.json",
+        mime="application/json", width="stretch",
+    )
+    st.caption(
+        f"🔗 ShopCloner Phase 2 입력용 · categories {len(_schema['categories'])}개 · "
+        f"gem_keywords {len(_schema['gem_keywords'])}개"
+        + ("  (소싱 서브카테고리 반영됨)" if _sr else "  (소싱 리스트 생성 시 categories 풍부해짐)"))
+
     st.divider()
     ui.render_strategy(result)
 
