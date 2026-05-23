@@ -52,7 +52,7 @@ modules/
   util.py                  seeded_rng(*parts) (카테고리 시드 결정론적 RNG), clamp()
   curated_data.py          CuratedCategory 데이터클래스 + 시드 CURATED 20개(이름·margin/demand/competition 1~3·reason)
   categories.py            활성 카테고리 목록 관리 + AI 새목록 생성 + 분석 이력 + 배치 결과 영속화
-  sources.py               외부 데이터: keyword_volumes()(Keywords Everywhere), keepa_snapshot()(Keepa) — 실패 시 None
+  sources.py               외부 데이터: keyword_volumes()(Keywords Everywhere), google_trends()(pytrends — 키 없는 Google Trends, vol=관심도 추정), keepa_snapshot()(Keepa) — 실패 시 None
   keyword_gen.py    [1]    카테고리 → 키워드 N개
   trend_check.py    [2]    키워드 검색량/성장률/안정성/계절성
   amazon_bsr.py     [3]    Amazon 베스트셀러 랭크·경쟁 리스팅 수
@@ -86,7 +86,7 @@ modules/
 ```
 DiscoveryRequest
  → keyword_gen.generate_keywords(req, n=8)         → tuple[Keyword]      LLM(fast); 없으면 템플릿("best {c}", "{c} for home"…)
- → trend_check.check_trend(cat, keywords)          → TrendResult        Keywords Everywhere 있으면 실 검색량+12개월 추세; 없으면 시드 mock
+ → trend_check.check_trend(cat, keywords)          → TrendResult        Keywords Everywhere(실 절대 검색량) → Google Trends(pytrends, 키 없음·관심도 기반 추정·실 추세) → 시드 mock 순. 구글 애즈 API 포기 후 Trends가 메인 구글 신호
    (TrendResult.keywords가 검색량 채워진 키워드로 교체됨)
  → amazon_bsr.check_bsr(cat, keywords)            → BSRResult          Keepa 있으면 실 best/median rank·경쟁 리스팅; 없으면 시드 mock
  → review_miner.mine_reviews(cat, keywords)       → ReviewResult       Keepa 있으면 실 평균 평점·리뷰 수(부정비율=평점에서 추정); 불만 테마는 LLM(fast); 없으면 시드 mock

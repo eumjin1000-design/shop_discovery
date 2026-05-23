@@ -1,8 +1,10 @@
 """Step 2 - search-trend signal for the category's keywords.
 
-Uses Keywords Everywhere for real monthly search volume + 12-month trend when
-``KW_EVERYWHERE_API_KEY`` is configured; otherwise deterministic mock figures
-seeded from the category.
+Real Google search demand, in priority order:
+  1. Keywords Everywhere (``KW_EVERYWHERE_API_KEY``) — real absolute volume.
+  2. Google Trends via pytrends — free/keyless; real relative interest, used
+     as the main signal now that Google Ads API access was abandoned.
+  3. Deterministic mock seeded from the category (offline fallback).
 
 Interface
 ---------
@@ -16,13 +18,17 @@ from .util import clamp, seeded_rng
 
 
 def check_trend(category: str, keywords: tuple[Keyword, ...]) -> TrendResult:
-    real = sources.keyword_volumes([kw.term for kw in keywords])
+    terms = [kw.term for kw in keywords]
+    real = sources.keyword_volumes(terms)
     if real:
-        return _from_keywords_everywhere(category, keywords, real)
+        return _from_real(category, keywords, real, "Keywords Everywhere", abs_vol=True)
+    trends = sources.google_trends(terms)
+    if trends:
+        return _from_real(category, keywords, trends, "Google Trends", abs_vol=False)
     return _mock(category, keywords)
 
 
-def _from_keywords_everywhere(category, keywords, data) -> TrendResult:
+def _from_real(category, keywords, data, source, abs_vol) -> TrendResult:
     enriched: list[Keyword] = []
     agg_trend: list[int] = []
     for kw in keywords:
@@ -43,9 +49,12 @@ def _from_keywords_everywhere(category, keywords, data) -> TrendResult:
 
     total_vol = sum(k.est_monthly_volume for k in enriched)
     direction = "rising" if growth >= 1.05 else ("declining" if growth <= 0.95 else "flat")
+    vol_word = "합산 월 검색량" if abs_vol else "합산 관심도 추정 검색량"
+    vol_note = ("[실데이터: Keywords Everywhere]" if abs_vol else
+                "[실데이터: Google Trends — 검색량은 관심도(0-100) 기반 상대 추정, 순위는 구글 실데이터]")
     notes = (
-        f"Keywords Everywhere: 합산 월 검색량 ~{total_vol:,}, 12개월 추세 {direction} "
-        f"({growth:.2f}x), {'계절성 있음' if is_seasonal else '연중 수요'}. [실데이터: Keywords Everywhere]"
+        f"{source}: {vol_word} ~{total_vol:,}, 12개월 추세 {direction} "
+        f"({growth:.2f}x), {'계절성 있음' if is_seasonal else '연중 수요'}. {vol_note}"
     )
     return TrendResult(
         keywords=tuple(enriched), growth_ratio=growth, stability=stability,

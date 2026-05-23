@@ -11,6 +11,7 @@ from __future__ import annotations
 import concurrent.futures
 import os
 import statistics
+import time
 from typing import Callable, Optional, TypeVar
 
 _T = TypeVar("_T")
@@ -37,6 +38,12 @@ def _with_timeout(fn: Callable[[], _T], timeout: float = KEEPA_TIMEOUT_SEC) -> O
 _KW_CACHE: dict[tuple[str, ...], Optional[dict]] = {}
 _KEEPA_CACHE: dict[str, Optional[dict]] = {}
 _KEEPA_ASINS_CACHE: dict[str, Optional[list[dict]]] = {}
+_TRENDS_CACHE: dict[tuple[str, ...], Optional[dict]] = {}
+
+# Google Trends interest (0-100) → estimated monthly volume. Trends gives
+# RELATIVE interest, not absolute searches, so this scale (interest 100 ≈ 60k)
+# only makes the relative ordering Google-real; absolute numbers are estimates.
+_TRENDS_VOL_SCALE = 600
 
 
 def _env(name: str) -> Optional[str]:
@@ -116,6 +123,83 @@ def trend_signal(trend_values: list[int]) -> Optional[dict]:
         "stability": round(max(0.0, min(1.0, 1.0 - stdev)), 3),
         "is_seasonal": spread > 0.7,
     }
+
+
+# --------------------------------------------------------------------------
+# Google Trends (pytrends) — free, keyless real Google search-demand signal.
+# Used when Keywords Everywhere is not configured. Google rate-limits
+# unofficial access (HTTP 429); any failure returns None → caller uses mock.
+# --------------------------------------------------------------------------
+def google_trends_available() -> bool:
+    try:
+        import pytrends  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def _to_monthly(series: list[int], n: int = 12) -> list[int]:
+    """Compress a weekly (~52pt) interest series into ~n monthly buckets."""
+    if not series:
+        return []
+    size = max(1, len(series) // n)
+    return [int(round(statistics.fmean(series[i:i + size])))
+            for i in range(0, len(series), size)][:n]
+
+
+def _trends_fetch(terms: list[str], geo: str) -> Optional[dict[str, dict]]:
+    from pytrends.request import TrendReq
+
+    pt = TrendReq(hl="en-US", tz=360, timeout=(10, 25))
+    parsed: dict[str, dict] = {}
+    anchor = terms[0]
+    anchor_ref: Optional[float] = None
+    for i in range(0, len(terms), 5):
+        batch = terms[i:i + 5]
+        if i > 0 and anchor not in batch:           # shared anchor → cross-batch scale
+            batch = [anchor] + batch[:4]
+        pt.build_payload(batch, timeframe="today 12-m", geo=geo)
+        df = pt.interest_over_time()
+        if df is None or df.empty:
+            continue
+        means = {t: statistics.fmean([int(v) for v in df[t].tolist()])
+                 for t in batch if t in df.columns}
+        if anchor in means and means[anchor] > 0:
+            anchor_ref = anchor_ref or means[anchor]
+            scale = anchor_ref / means[anchor]
+        else:
+            scale = 1.0
+        for t in batch:
+            if t not in df.columns or t in parsed:
+                continue
+            series = [int(v) for v in df[t].tolist()]
+            mean_i = statistics.fmean(series) * scale if series else 0.0
+            parsed[t] = {"vol": int(round(mean_i * _TRENDS_VOL_SCALE)),
+                         "competition": 0.0, "trend": _to_monthly(series)}
+        time.sleep(1.0)                              # be gentle to dodge 429
+    return parsed or None
+
+
+def google_trends(terms: list[str], geo: str = "US") -> Optional[dict[str, dict]]:
+    """Real Google search-demand via Google Trends, keyless.
+
+    Returns ``{term: {"vol": int, "competition": 0.0, "trend": [~12 monthly]}}``
+    — same shape as :func:`keyword_volumes`. ``vol`` is a Trends-interest-derived
+    estimate (relative ordering is Google-real; absolute is approximate).
+    ``None`` on any failure (missing pytrends, 429 block, network).
+    """
+    if not terms:
+        return None
+    cache_key = tuple(sorted(terms))
+    if cache_key in _TRENDS_CACHE:
+        return _TRENDS_CACHE[cache_key]
+    result = None
+    try:
+        result = _trends_fetch(terms[:9], geo)       # cap requests (≤2 batches)
+    except Exception:
+        result = None
+    _TRENDS_CACHE[cache_key] = result
+    return result
 
 
 # --------------------------------------------------------------------------
