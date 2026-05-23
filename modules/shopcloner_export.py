@@ -33,6 +33,34 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", str(text or "").lower()).strip("-") or "shop"
 
 
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", str(text or "").lower())
+
+
+_GENERIC_STOP = {"the", "and", "for", "with", "best", "top", "set", "size",
+                 "pack", "plus", "support", "memory"}
+
+
+def _category_stop(category: str) -> set[str]:
+    """Category's own words (+ singular/plural) — too common to be distinctive."""
+    stop: set[str] = set()
+    for w in _words(category):
+        stop.add(w)
+        stop.add(w.rstrip("s"))
+        stop.add(w + "s")
+    return stop
+
+
+def _distinctive_token(subcategory: str, cat_stop: set[str]) -> str:
+    """First meaningful word of a subcategory name (e.g. 'Cervical & Contour
+    Memory Foam Pillows' → 'cervical'), used as the gem's collection tag so
+    section-4 matching is explicit/clean instead of fuzzy."""
+    for w in _words(subcategory):
+        if len(w) >= 4 and w not in cat_stop and w not in _GENERIC_STOP:
+            return w
+    return ""
+
+
 def _kd_from_bsr(competing_listings: int) -> int:
     """Estimate keyword difficulty (0-100) from Amazon competing-listing count.
 
@@ -79,6 +107,45 @@ def _categories_from_sourcing(sourcing_result) -> list[dict]:
     return cats
 
 
+def _extract_gems(result: PipelineResult, sourcing_result, kd: int,
+                  category: str) -> list[dict]:
+    """Extract gem keywords for the schema.
+
+    With a sourcing result: pull each subcategory's keyword and tag it with the
+    subcategory's distinctive token (``category``) so it maps cleanly to that
+    collection in section 4 — and reuse the real search volume when the gem
+    matches an analysed keyword. Without sourcing: fall back to the analysed
+    keywords (no category tag).
+    """
+    base_vol = {k.term.lower(): int(k.est_monthly_volume or 0) for k in result.keywords}
+    gems: list[dict] = []
+    seen: set[str] = set()
+
+    if sourcing_result is not None:
+        cat_stop = _category_stop(category)
+        for row in getattr(sourcing_result, "rows", ()):  # SourcingRow
+            kw = (row.keyword or "").strip()
+            if not kw or kw.lower() in seen:
+                continue
+            seen.add(kw.lower())
+            gems.append({
+                "keyword": kw,
+                "volume": base_vol.get(kw.lower(), 0),
+                "kd": kd,
+                "category": _distinctive_token(row.subcategory, cat_stop),
+                "matching_products": [],
+            })
+
+    # Always include the analysed keywords (carry real volume); dedup.
+    for k in result.keywords:
+        if k.term.lower() in seen:
+            continue
+        seen.add(k.term.lower())
+        gems.append({"keyword": k.term, "volume": int(k.est_monthly_volume or 0),
+                     "kd": kd, "category": "", "matching_products": []})
+    return gems
+
+
 def to_universal_schema(result: PipelineResult, shop_name: str | None = None,
                         sourcing_result=None) -> dict:
     """Map a PipelineResult into ShopCloner's universal-seo-schema dict."""
@@ -106,11 +173,7 @@ def to_universal_schema(result: PipelineResult, shop_name: str | None = None,
         ],
     }
 
-    gem_keywords = [
-        {"keyword": k.term, "volume": int(k.est_monthly_volume or 0), "kd": kd,
-         "category": "", "matching_products": []}
-        for k in kws
-    ]
+    gem_keywords = _extract_gems(result, sourcing_result, kd, category)
 
     categories = (_categories_from_sourcing(sourcing_result)
                   if sourcing_result is not None else

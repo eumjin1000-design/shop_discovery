@@ -195,7 +195,9 @@ def _gem_matching(pdf: _Report, schema: dict, category: str) -> None:
             pdf.set_font("Helvetica", "", 8)
             pdf.cell(55, 6, " " + _fit(c.get("name", ""), 35), border="B", fill=fill)
             pdf.cell(95, 6, " " + _fit(g.get("keyword", ""), 62), border="B", fill=fill)
-            pdf.cell(40, 6, f" {g.get('volume', 0):,} / KD {g.get('kd', 0)}",
+            vol = g.get("volume", 0)
+            vol_txt = f"{vol:,}" if vol else "-"   # 0 = 미측정(소싱 추출) → '-'
+            pdf.cell(40, 6, f" vol {vol_txt} / KD {g.get('kd', 0)}",
                      border="B", fill=fill, new_x="LMARGIN", new_y="NEXT")
             fill = not fill
             rows += 1
