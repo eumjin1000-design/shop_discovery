@@ -164,19 +164,31 @@ def _seo_meta(pdf: _Report, schema: dict) -> None:
 
 
 def _collections(pdf: _Report, cats: list[dict]) -> None:
-    _section(pdf, "3. Smart Collections")
+    _section(pdf, "3. Smart Collections (Main vs Secondary by Google Trends)")
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(130, 130, 130)
-    pdf.cell(0, 5, _ascii(f"{len(cats)} collections"), new_x="LMARGIN", new_y="NEXT")
-    _thead(pdf, [("Collection", 60), ("Handle", 50), ("TITLE CONTAINS", 80)])
+    pdf.cell(0, 5, _ascii(f"{len(cats)} collections - tier ranked by real Google "
+             "Trends demand (Main = highest)"), new_x="LMARGIN", new_y="NEXT")
+    _thead(pdf, [("Tier", 18), ("Collection", 54), ("TITLE CONTAINS", 60),
+                 ("Trends Vol", 38)])
     fill = False
     for c in cats:
-        pdf.set_fill_color(248, 248, 248)
+        is_main = c.get("tier") == "main"
+        pdf.set_fill_color(255, 243, 238) if is_main else pdf.set_fill_color(248, 248, 248)
+        # Tier
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*_ACCENT) if is_main else pdf.set_text_color(120, 120, 120)
+        pdf.cell(18, 6, " MAIN" if is_main else " Sec", border="B", fill=True)
+        # Collection (main bold)
+        pdf.set_text_color(40, 40, 40)
+        pdf.set_font("Helvetica", "B" if is_main else "", 8)
+        pdf.cell(54, 6, " " + _fit(c.get("name", ""), 34), border="B", fill=True)
         pdf.set_font("Helvetica", "", 8)
-        pdf.cell(60, 6, " " + _fit(c.get("name", ""), 38), border="B", fill=fill)
-        pdf.cell(50, 6, " " + _fit(_slug(c.get("name", "")), 32), border="B", fill=fill)
-        pdf.cell(80, 6, " " + _fit(", ".join(c.get("keywords", [])[:4]), 52),
-                 border="B", fill=fill, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(60, 6, " " + _fit(", ".join(c.get("keywords", [])[:3]), 40),
+                 border="B", fill=True)
+        vol = c.get("trends_volume", 0)
+        pdf.cell(38, 6, f" {vol:,}" if vol else " -", border="B", fill=True,
+                 new_x="LMARGIN", new_y="NEXT")
         fill = not fill
 
 

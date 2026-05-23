@@ -26,7 +26,28 @@ from __future__ import annotations
 import json
 import re
 
+from . import sources
 from .models import PipelineResult
+
+
+def _rank_collections(categories: list[dict], category: str) -> list[dict]:
+    """Rank collections by real Google Trends demand → main vs secondary.
+
+    Each collection's representative keyword is queried on Google Trends
+    (keyless); the highest-demand collection becomes ``tier="main"``, the rest
+    ``"secondary"``. Adds ``trends_volume`` and ``tier`` to each, returns the
+    list sorted main-first. Trends failure → first collection defaults to main.
+    """
+    if not categories:
+        return categories
+    reps = [(c.get("keywords") or [c.get("name", "")])[0] for c in categories]
+    vols = sources.google_trends(reps) or {}
+    for cat, term in zip(categories, reps):
+        cat["trends_volume"] = int((vols.get(term) or {}).get("vol") or 0)
+    ranked = sorted(categories, key=lambda c: c.get("trends_volume", 0), reverse=True)
+    for i, cat in enumerate(ranked):
+        cat["tier"] = "main" if i == 0 else "secondary"
+    return ranked
 
 
 def _slug(text: str) -> str:
@@ -203,6 +224,7 @@ def to_universal_schema(result: PipelineResult, shop_name: str | None = None,
     categories = (_categories_from_sourcing(sourcing_result)
                   if sourcing_result is not None
                   else _categories_from_keywords(kws, category))
+    categories = _rank_collections(categories, category)  # Google Trends → main/secondary
 
     return {
         "shop_concept": shop_concept,
