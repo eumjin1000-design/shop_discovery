@@ -117,12 +117,12 @@ def _extract_gems(result: PipelineResult, sourcing_result, kd: int,
     matches an analysed keyword. Without sourcing: fall back to the analysed
     keywords (no category tag).
     """
+    cat_stop = _category_stop(category)
     base_vol = {k.term.lower(): int(k.est_monthly_volume or 0) for k in result.keywords}
     gems: list[dict] = []
     seen: set[str] = set()
 
     if sourcing_result is not None:
-        cat_stop = _category_stop(category)
         for row in getattr(sourcing_result, "rows", ()):  # SourcingRow
             kw = (row.keyword or "").strip()
             if not kw or kw.lower() in seen:
@@ -136,14 +136,39 @@ def _extract_gems(result: PipelineResult, sourcing_result, kd: int,
                 "matching_products": [],
             })
 
-    # Always include the analysed keywords (carry real volume); dedup.
+    # Always include the analysed keywords (carry real volume); dedup. Tag each
+    # with its own distinctive token so it maps to a collection in section 4
+    # even when there is no sourcing list.
     for k in result.keywords:
         if k.term.lower() in seen:
             continue
         seen.add(k.term.lower())
         gems.append({"keyword": k.term, "volume": int(k.est_monthly_volume or 0),
-                     "kd": kd, "category": "", "matching_products": []})
+                     "kd": kd, "category": _distinctive_token(k.term, cat_stop),
+                     "matching_products": []})
     return gems
+
+
+def _cluster_keywords(kws, category: str) -> dict[str, list]:
+    """Group analysed keywords by their distinctive token → pseudo-subcategories
+    (e.g. 'cooling memory foam pillow' → 'cooling'). Used to build multiple
+    collections from the analysis alone when no sourcing list exists."""
+    cat_stop = _category_stop(category)
+    clusters: dict[str, list] = {}
+    for k in kws:
+        clusters.setdefault(_distinctive_token(k.term, cat_stop), []).append(k)
+    return clusters
+
+
+def _categories_from_keywords(kws, category: str) -> list[dict]:
+    """Multiple collections derived from the analysed keywords (no sourcing).
+    Untokenised keywords ('memory foam pillow') fall under the base category."""
+    cats = []
+    for tok, ks in _cluster_keywords(kws, category).items():
+        name = f"{tok.title()} {category}" if tok else category
+        cats.append({"name": name, "h1": "", "title_tag": "",
+                     "meta_description": "", "keywords": [k.term for k in ks][:8]})
+    return cats
 
 
 def to_universal_schema(result: PipelineResult, shop_name: str | None = None,
@@ -176,9 +201,8 @@ def to_universal_schema(result: PipelineResult, shop_name: str | None = None,
     gem_keywords = _extract_gems(result, sourcing_result, kd, category)
 
     categories = (_categories_from_sourcing(sourcing_result)
-                  if sourcing_result is not None else
-                  [{"name": category, "h1": "", "title_tag": "",
-                    "meta_description": "", "keywords": [k.term for k in kws][:8]}])
+                  if sourcing_result is not None
+                  else _categories_from_keywords(kws, category))
 
     return {
         "shop_concept": shop_concept,
