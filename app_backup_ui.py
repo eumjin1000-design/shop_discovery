@@ -14,7 +14,7 @@ import json
 
 import streamlit as st
 
-from modules import categories
+from modules import categories, result_store
 from modules.timez import stamp as kst_stamp
 
 
@@ -33,6 +33,7 @@ def render_backup_section() -> None:
             if categories.restore_previous_list():
                 st.session_state.pop("batch_rows", None)
                 st.session_state.pop("result", None)
+                result_store.clear_last_result()
                 st.toast("↩ 이전 카테고리 목록으로 복원했습니다.")
                 st.rerun()
             else:
@@ -62,6 +63,7 @@ def render_backup_section() -> None:
             if categories.import_all_state(data):
                 st.session_state.pop("batch_rows", None)
                 st.session_state.pop("result", None)
+                result_store.clear_last_result()
                 exported = data.get("exported_at", "?")
                 st.success(f"✅ 백업 복원 완료 (백업 시점: {exported}). 새로고침합니다.")
                 st.rerun()

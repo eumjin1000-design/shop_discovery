@@ -8,7 +8,7 @@ import re
 
 import streamlit as st
 
-from modules import categories, llm
+from modules import categories, llm, result_store
 
 DECISION_COLOR = {"GO": "#2e7d32", "WATCH": "#f9a825", "NO-GO": "#c62828"}
 
@@ -113,6 +113,7 @@ def render_list_header() -> None:
         if categories.restore_previous_list():
             st.session_state.pop("batch_rows", None)
             st.session_state.pop("result", None)
+            result_store.clear_last_result()
             st.toast("↩ 이전 카테고리 목록으로 복원했습니다.")
             st.rerun()
         else:
@@ -129,6 +130,7 @@ def render_list_header() -> None:
             if gen:
                 st.session_state.pop("batch_rows", None)
                 st.session_state.pop("result", None)
+                result_store.clear_last_result()
                 st.session_state["category_input"] = ""
                 st.toast(f"✨ 새 목록 {len(gen)}개 생성{label} — 백업 저장 완료")
                 st.rerun()

@@ -94,6 +94,13 @@ if "batch_rows" not in st.session_state:
     if _saved:
         st.session_state["batch_rows"] = _saved
 
+# Restore the last single-analysis result from disk (survives restart/reboot).
+from modules import result_store
+if "result" not in st.session_state:
+    _saved_res = result_store.load_last_result()
+    if _saved_res is not None:
+        st.session_state["result"] = _saved_res
+
 # Decision map: analysis history (name -> GO/WATCH/NO-GO) + live result + batch.
 _dec_map: dict[str, str | None] = dict(categories.load_history_map())
 _live = st.session_state.get("result")
@@ -166,6 +173,24 @@ st.divider()
 app_backup_ui.render_backup_section()
 app_keepa_ui.preflight_banner(_ks.COST_PER_CATEGORY, "단일 분석")
 st.caption("💡 24시간 이내 분석한 카테고리는 캐시가 적용되어 토큰이 소모되지 않습니다.")
+
+# ↩ 이전 분석 카테고리 복원 — 이전에 분석한 목록에서 골라 입력칸에 되돌림.
+# 반드시 폼 밖에 둬야 선택 즉시 category_input에 반영된다(폼 안은 submit까지 지연).
+_hist_map = categories.load_history_map()
+if _hist_map:
+    with st.expander(f"↩ 이전 분석 카테고리에서 복원 ({len(_hist_map)}개)"):
+        _opts = ["— 선택 —"] + sorted(_hist_map)
+        _pick = st.selectbox(
+            "이전에 분석한 카테고리", _opts, key="hist_pick",
+            format_func=lambda n: n if n == "— 선택 —"
+            else f"{n}  ·  {_hist_map.get(n) or '미정'}",
+        )
+        if _pick != "— 선택 —" and st.button(
+                "↩ 이 카테고리로 복원", width="stretch", key="hist_restore"):
+            st.session_state["category_input"] = _pick
+            st.toast(f"↩ '{_pick}' 복원 — 아래에서 분석 실행")
+            st.rerun()
+
 with st.form("discovery"):
     st.text_input("분석할 카테고리", key="category_input",
                   placeholder="직접 입력하거나 위에서 선택 / 랜덤 추천 (예: wireless earbuds)")
@@ -188,6 +213,7 @@ if submitted:
             category, target_market=market.strip() or "US", currency=currency.strip() or "USD"
         )
     categories.mark_analyzed(category, decision=st.session_state["result"].verdict.decision)
+    result_store.save_last_result(st.session_state["result"])  # survives restart
     st.rerun()
 
 result: PipelineResult | None = st.session_state.get("result")
