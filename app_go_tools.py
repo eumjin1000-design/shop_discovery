@@ -14,7 +14,8 @@ from modules import shop_namer, sourcing, sourcing_report
 
 
 def _shop_name_block(category: str) -> None:
-    st.markdown("**🏷️ 샵 이름 자동 생성** — 영어 · 기억하기 쉬움 · .com 가능성 고려")
+    st.markdown("**🏷️ 샵 이름 자동 생성** — 영어 · 기억하기 쉬움 · "
+                "다양한 TLD(.com/.co/.shop/.store/.io/.app) 후보 제시")
     if st.button("🏷️ 샵 이름 5개 생성", key="gen_shop_names"):
         with st.spinner("샵 이름 생성 중..."):
             st.session_state["shop_names"] = shop_namer.generate_shop_names(category, 5)
@@ -26,10 +27,17 @@ def _shop_name_block(category: str) -> None:
     by = {sn.name: sn for sn in names}
     chosen = st.radio(
         "마음에 드는 이름 선택", [sn.name for sn in names], key="shop_name_radio",
-        format_func=lambda n: f"{n}  —  {by[n].concept}  ·  🌐 {by[n].domain}",
+        format_func=lambda n: f"{n}  —  {by[n].concept}",
     )
     st.session_state["shop_name_selected"] = chosen
-    st.success(f"선택: **{chosen}**  ·  도메인 후보: `{by[chosen].domain}`")
+    # Diverse domain candidates — bare .com은 보통 이미 선점이라 다양한 TLD/접두어
+    # 후보를 함께 제시. Whois/등록 가능 여부는 별도 확인 필요(라이브 체크 안 함).
+    doms = by[chosen].domains
+    st.success(f"선택: **{chosen}**")
+    st.markdown("🌐 **도메인 후보** (Whois 확인 후 등록):  " +
+                "  ·  ".join(f"`{d}`" for d in doms))
+    st.caption("💡 .com 단독은 보통 선점됨 — .co/.shop/.store나 접두어(get/shop/the/hello) "
+               "조합이 실제 등록 가능성이 높습니다.")
 
 
 def _sourcing_controls() -> tuple[int, int, int, int, bool]:
