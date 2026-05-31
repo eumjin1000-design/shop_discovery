@@ -52,7 +52,8 @@ def run_pipeline(category: str, *, target_market: str = "US", currency: str = "U
     category = _strip_annotation(category)
     request = DiscoveryRequest(category=category, target_market=target_market, currency=currency)
 
-    keywords = keyword_gen.generate_keywords(request)
+    # 확장 키워드 400개 — LLM 50 seed + prefix/suffix 모디파이어 확장
+    keywords = keyword_gen.generate_keywords(request, n=400)
     trend = trend_check.check_trend(category, keywords)
     keywords = trend.keywords  # trend_check enriches volume estimates
     bsr = amazon_bsr.check_bsr(category, keywords)

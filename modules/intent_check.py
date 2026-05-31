@@ -28,7 +28,12 @@ def check_intent(category: str, keywords: tuple[Keyword, ...]) -> IntentResult:
 
 
 def _from_llm(category: str, keywords: tuple[Keyword, ...]) -> IntentResult | None:
-    terms = ", ".join(kw.term for kw in keywords)
+    # Cap at top-30 by volume — keyword_gen can return up to 400; sending all
+    # would explode the prompt without adding signal (intent is well-estimated
+    # from the head of the distribution).
+    top = sorted(keywords, key=lambda k: k.est_monthly_volume or 0,
+                 reverse=True)[:30]
+    terms = ", ".join(kw.term for kw in top)
     prompt = (
         f'Audience research for "{category}" on US Amazon. Search terms: '
         f"{terms}\nEstimate: commercial_intent 0..1 (share ready-to-buy), "
