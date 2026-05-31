@@ -30,14 +30,30 @@ def _shop_name_block(category: str) -> None:
         format_func=lambda n: f"{n}  —  {by[n].concept}",
     )
     st.session_state["shop_name_selected"] = chosen
-    # Diverse domain candidates — bare .com은 보통 이미 선점이라 다양한 TLD/접두어
-    # 후보를 함께 제시. Whois/등록 가능 여부는 별도 확인 필요(라이브 체크 안 함).
+    # Diverse candidates + live Whois — 선택된 이름의 8개 후보를 병렬로 조회해
+    # ✅(등록 가능) / ❌(선점) / ❓(Whois 미상)으로 표시. 결과는 프로세스
+    # 캐시되어 같은 도메인 재조회는 즉시 반환.
+    from modules import domain_check
     doms = by[chosen].domains
     st.success(f"선택: **{chosen}**")
-    st.markdown("🌐 **도메인 후보** (Whois 확인 후 등록):  " +
-                "  ·  ".join(f"`{d}`" for d in doms))
-    st.caption("💡 .com 단독은 보통 선점됨 — .co/.shop/.store나 접두어(get/shop/the/hello) "
-               "조합이 실제 등록 가능성이 높습니다.")
+    with st.spinner(f"🔍 {len(doms)}개 도메인 Whois 조회 중..."):
+        avail = domain_check.check_many(doms, timeout=5.0)
+    _ICON = {"available": "✅", "taken": "❌", "unknown": "❓"}
+    _LABEL = {"available": "등록 가능", "taken": "선점", "unknown": "확인 실패"}
+    free = [d for d in doms if avail.get(d) == "available"]
+    taken = sum(1 for d in doms if avail.get(d) == "taken")
+    st.markdown(f"🌐 **도메인 후보** — 등록 가능 **{len(free)}개** · 선점 {taken}개")
+    # 2열 그리드로 도메인 + 상태 표기
+    cols = st.columns(2)
+    for i, d in enumerate(doms):
+        s = avail.get(d, "unknown")
+        cols[i % 2].markdown(f"{_ICON[s]} `{d}`  ·  *{_LABEL[s]}*")
+    if free:
+        st.caption("💡 ✅ 표시된 후보는 지금 등록 가능합니다 "
+                   "(Namecheap·Porkbun·Cloudflare Registrar 등에서 즉시 등록).")
+    else:
+        st.caption("⚠️ 등록 가능한 후보가 없습니다 — 다른 이름을 선택하거나 "
+                   "샵 이름을 재생성하세요.")
 
 
 def _sourcing_controls() -> tuple[int, int, int, int, bool]:
