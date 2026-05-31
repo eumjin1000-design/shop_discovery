@@ -77,10 +77,11 @@ def _sourcing_controls() -> tuple[int, int, int, int, bool]:
         step=1, key="src_vars",
         help="상품당 변형 라벨 수 (Standard/Compact/...). 권장 5-10")
     c_pg, c_ps = st.columns(2)
-    n_pages = c_pg.slider("페이지 깊이", 1, 5,
+    n_pages = c_pg.slider("페이지 깊이", 1, 7,
         st.session_state.get("src_pages", sourcing.DEFAULT_PAGES),
         key="src_pages",
-        help="각 검색 URL을 page 1..N으로 사전 확장. 5까지가 정확도 안전선")
+        help="각 검색 URL을 page 1..N으로 사전 확장. 5까지가 정확도 안전선, "
+             "6-7은 롱테일 추가 수확용(중복·노이즈↑)")
     n_passes = c_ps.slider("LLM 패스 수", 1, 3,
         st.session_state.get("src_passes", sourcing.DEFAULT_PASSES),
         key="src_passes",
