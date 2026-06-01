@@ -41,6 +41,16 @@ NODE_DB: dict[str, str] = {
     # 카테고리 특화 compound (phone accessories, car accessories 등)만 유지.
     # Office
     "office products": "1069242", "office supplies": "1069242", "desk accessories": "1069242",
+    # Ergonomic / Standing Desk Workspace (Office Products parent로 안전 라우팅)
+    "ergonomic": "1069242", "ergonomics": "1069242", "ergonomic chair": "1069242",
+    "standing desk": "1069242", "standing desk converter": "1069242",
+    "footrest": "1069242", "keyboard tray": "1069242", "monitor stand": "1069242",
+    # Computer Peripherals (Electronics 노드 활용)
+    "ergonomic keyboard": "541966", "ergonomic mouse": "541966",
+    "mechanical keyboard": "541966", "wireless mouse": "541966",
+    "monitor arm": "541966", "monitor mount": "541966",
+    # Anti-fatigue / Floor Mat (Home & Kitchen 노드)
+    "anti fatigue mat": "1055398", "standing mat": "1055398", "floor mat": "1055398",
     # Automotive
     "automotive": "15684181", "car accessories": "15684181", "car electronics": "15684181",
     # Outdoor & Garden
