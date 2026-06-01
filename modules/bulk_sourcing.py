@@ -122,6 +122,35 @@ _QUERY_MODIFIERS = ("", "best", "top rated", "premium", "amazon best seller",
                     "bestseller", "highly rated", "trending", "for women",
                     "for men", "gift", "professional", "compact", "portable")
 
+# Shop-concept/brand-name words that don't appear in real Amazon searches.
+# When 3+ word input contains any of these, it's almost certainly a shop name
+# from shop_namer (not a product search term) — modifier expansion would yield
+# garbage like "Standing Workday Ergonomics best".
+_SHOP_CONCEPT_WORDS = frozenset({
+    "workday", "ergonomics", "lab", "labs", "studio", "studios",
+    "lifestyle", "world", "co", "hub", "nest", "store", "shop",
+    "haus", "house", "boutique", "atelier", "collective", "society",
+    "supply", "supplies", "goods", "essentials", "company",
+})
+
+
+def _looks_like_shop_concept(q: str) -> bool:
+    """True when the input looks like a shop-concept name (e.g. "Standing
+    Workday Ergonomics") rather than a real search query (e.g. "memory foam
+    pillow").
+
+    Heuristic: ``3+ words`` AND contains at least one shop-concept word
+    (workday/ergonomics/lab/studio/...). Title-case alone is NOT used as a
+    signal — "Memory Foam Pillows" is title-cased but a legitimate product
+    name. The shop-concept word list catches the actual offending pattern
+    from :mod:`modules.shop_namer`'s output.
+    """
+    words = q.split()
+    if len(words) < 3:
+        return False
+    lower_words = [w.lower().strip(".,!?") for w in words]
+    return any(w in _SHOP_CONCEPT_WORDS for w in lower_words)
+
 
 def spark_query_list(query: str, n_variations: int = 8,
                      include_broad: bool = False,
@@ -145,6 +174,22 @@ def spark_query_list(query: str, n_variations: int = 8,
         return SourcingResult(category="(empty query)", rows=(), n_subs=0,
                               n_variants=0, total=0,
                               summary="키워드를 입력하세요.")
+    # 샵 컨셉명 입력 차단 — modifier 확장이 전부 쓰레기 키워드로 떨어지는 것 방지
+    # (예: "Standing Workday Ergonomics" + best/top rated/... → 모두 무의미)
+    if _looks_like_shop_concept(q):
+        offenders = [w for w in q.lower().split() if w in _SHOP_CONCEPT_WORDS]
+        reason = ("샵 컨셉/브랜드 단어 포함" if offenders
+                  else "3+ 단어 모두 대문자(샵명 추정)")
+        hint = f" ({', '.join(offenders)})" if offenders else ""
+        return SourcingResult(
+            category=f"(rejected) {q}", rows=(), n_subs=0, n_variants=0,
+            total=0,
+            summary=(f"⚠️ **'{q}'** 는 샵 컨셉명으로 보입니다 — {reason}{hint}. "
+                     "modifier 확장 시 모두 쓰레기 키워드가 됩니다. "
+                     "**실제 상품 검색어**로 입력하세요 — 예: "
+                     "`standing desk`, `ergonomic mouse`, `anti fatigue mat`, "
+                     "`monitor arm`, `footrest`."),
+        )
     hf_cat = dataset_lookup.map_category(q)
     node = spark_urls.HF_TO_BROWSE_NODE.get(hf_cat or "", "")
     n = max(1, min(int(n_variations), len(_QUERY_MODIFIERS)))
