@@ -45,6 +45,41 @@ _WORD_RE = re.compile(r"[a-z0-9]+")
 GENERIC_WORDS = {"home", "sport", "best", "new", "top", "kit", "set",
                  "pro", "mini", "portable", "premium", "compact", "plus", "product"}
 
+# 키워드 단축 시 제거할 수식어/접속사 — 핵심 명사만 남기기 위함.
+# (수확량을 위해 broad 키워드로 변환 — long-tail SEO 키워드는 Amazon에서
+# 결과 50-200개에 그치고 깊은 페이지 요청이 봇 차단을 유발한다.)
+_FILLER_WORDS = frozenset({
+    # 접속사·전치사·관사
+    "for", "with", "and", "or", "the", "of", "to", "in", "on", "at",
+    "by", "from", "your", "this", "that", "these", "those", "a", "an",
+    # 의미 약한 한정사
+    "all", "any", "every", "best", "top", "new", "great",
+    # 부사
+    "fully", "highly", "very", "really", "easy", "quick", "simple",
+    # 자주 등장하는 수식 형용사 (핵심 명사 아님)
+    "adjustable", "single", "dual", "triple", "wide", "tall", "short",
+    "large", "small", "thick", "thin", "high", "low", "mid", "ultra",
+    "full", "compact", "premium", "professional", "modern", "classic",
+})
+
+
+def _simplify_keyword(kw: str, max_words: int = 3) -> str:
+    """4+ word long-tail → 핵심 2-3 단어로 단축.
+
+    Long-tail SEO 키워드(예: "single monitor arm fully adjustable")는 Amazon
+    검색 결과가 50-200개에 그쳐 깊은 페이지 요청 시 봇 차단을 유발한다.
+    상품의 **핵심 명사는 보통 키워드 뒤쪽**에 있으므로 (e.g. "memory foam
+    keyboard wrist rest pad" → "wrist rest pad") 의미 단어 중 뒤에서 N개를
+    남긴다. Filler/형용사(for/with/fully/adjustable/electric 등)는 제외.
+    """
+    words = (kw or "").split()
+    if len(words) <= max_words:
+        return kw or ""
+    meaningful = [w for w in words if w.lower() not in _FILLER_WORDS]
+    if len(meaningful) <= max_words:
+        return " ".join(meaningful)
+    return " ".join(meaningful[-max_words:])
+
 
 def _ranked_nodes(text: str) -> list[tuple[str, str, float]]:
     """NODE_DB matches for ``text``, best first as (node_id, key, score).
@@ -184,8 +219,9 @@ def generate_sourcing_list(category: str, n_subs: int = DEFAULT_SUBS,
                    or _guess_node(category, sub["subcategory"]))
         for prod in sub["products"]:
             base = prod.get("est_price")
-            keyword = (str(prod.get("keyword") or "").strip()
-                       or f"best {prod['name']}".lower())
+            keyword = _simplify_keyword(
+                str(prod.get("keyword") or "").strip()
+                or f"best {prod['name']}".lower())
             brand = str(prod.get("brand") or "").strip()
             asin = str(prod.get("asin") or "").strip()
             try:

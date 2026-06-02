@@ -60,8 +60,18 @@ def _sourcing_controls() -> tuple[int, int, int, int, bool]:
     """Render the sourcing-list controls and return (n_subs, n_vars, n_pages,
     n_passes, verify_urls). 🚀 정확도 최대 preset overwrites session_state
     values before the widgets render so the user sees the new values."""
-    if st.button("🚀 정확도 최대 (서브 15·변형 10·페이지 5·1패스)",
-                 key="src_preset", help="안전선 내 최대값으로 자동 세팅"):
+    c_pre1, c_pre2 = st.columns(2)
+    if c_pre1.button("🛡️ 다양성 최대 (서브 25·변형 8·페이지 3·broad 키워드)",
+                     key="src_preset_safe",
+                     help="2-3단어 broad 키워드 + 페이지 3 → URL당 풍부한 결과·낮은 차단 위험"):
+        st.session_state["src_subs"] = 25
+        st.session_state["src_vars"] = 8
+        st.session_state["src_pages"] = 3
+        st.session_state["src_passes"] = 1
+        st.rerun()
+    if c_pre2.button("🎯 정밀 최대 (서브 15·변형 10·페이지 5)",
+                     key="src_preset",
+                     help="구체 키워드·깊은 페이지. 봇 차단 위험 ↑"):
         st.session_state["src_subs"] = 15
         st.session_state["src_vars"] = 10
         st.session_state["src_pages"] = 5
@@ -80,8 +90,10 @@ def _sourcing_controls() -> tuple[int, int, int, int, bool]:
     n_pages = c_pg.slider("페이지 깊이", 1, 7,
         st.session_state.get("src_pages", sourcing.DEFAULT_PAGES),
         key="src_pages",
-        help="각 검색 URL을 page 1..N으로 사전 확장. 5까지가 정확도 안전선, "
-             "6-7은 롱테일 추가 수확용(중복·노이즈↑)")
+        help="각 검색 URL을 page 1..N으로 사전 확장. **3까지 안전 권장**. "
+             "5+는 broad 키워드에서도 결과 적어 봇 차단 위험 ↑")
+    if n_pages >= 5:
+        c_pg.caption(f"⚠️ 페이지 {n_pages} — 봇 차단 위험. broad 키워드도 page 5+는 결과 부족")
     n_passes = c_ps.slider("LLM 패스 수", 1, 3,
         st.session_state.get("src_passes", sourcing.DEFAULT_PASSES),
         key="src_passes",

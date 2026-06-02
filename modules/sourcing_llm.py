@@ -31,10 +31,14 @@ USER_PROMPT = (
     "  amazon_node_id : 아래 후보 중 가장 적합한 노드 ID를 선택하세요. 확신이 없으면 빈 문자열.\n"
     "                   후보: {candidates}\n"
     'and list {products_n} specific product ideas. {real_block}'
-    'For each product give a likely incumbent "brand", a high-search-volume '
-    'low-competition "keyword", a USD retail "est_price", and "asin" + '
-    '"review_count". When a product matches an entry in REAL_PRODUCTS above, '
-    'COPY its exact asin/brand/est_price/review_count verbatim — do not invent. '
+    'For each product give a likely incumbent "brand", a SHORT 2-3 word '
+    'broad "keyword" that Amazon shoppers actually type and that returns '
+    'thousands of results (e.g. "office chair", "monitor stand", "standing '
+    'desk", "wireless mouse" — NOT 5+ word SEO long-tail like "single monitor '
+    'arm fully adjustable" which only returns 50-200 results). Then a USD '
+    'retail "est_price", and "asin" + "review_count". When a product matches '
+    'an entry in REAL_PRODUCTS above, COPY its exact asin/brand/est_price/'
+    'review_count verbatim — do not invent. '
     'Only invent asin="" / review_count=0 when no real match exists. '
     'Return ONLY a JSON array: '
     '[{{"subcategory": "...", "amazon_node_id": "...", "products": [{{"name": '
