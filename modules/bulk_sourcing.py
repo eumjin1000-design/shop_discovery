@@ -235,15 +235,18 @@ def spark_query_list(query: str, n_variations: int = 8,
 
 
 def spark_keywords_list(keywords: list[str], category_label: str,
-                        pages: int = 1, include_broad: bool = False,
+                        pages: int = 1, n_modifiers: int = 1,
+                        include_broad: bool = False,
                         hf_category_hint: str = "") -> SourcingResult:
     """Spark URLs from a **pre-validated keyword list** (e.g. analysis keywords).
 
     Use this when the user wants Spark URLs for an already-analysed shop whose
     concept name (e.g. "Standing Workday Ergonomics") would otherwise be
     rejected by :func:`spark_query_list`'s shop-concept filter. Each keyword
-    is simplified (long-tail → 2-3 word broad) and becomes one Spark URL.
-    Optionally appends the matched HF category's broad keywords.
+    is simplified (long-tail → 2-3 word broad), then optionally expanded with
+    SEO modifiers (best/top rated/cheap/...) × ``n_modifiers`` and paginated
+    × ``pages``. Optionally appends the matched HF category's broad keywords.
+    Total URLs ≈ ``(len(keywords) + broad) × n_modifiers × pages``.
     """
     from .sourcing import _simplify_keyword
 
@@ -264,17 +267,25 @@ def spark_keywords_list(keywords: list[str], category_label: str,
             summary="분석된 키워드가 없습니다. 먼저 카테고리 분석을 완료하세요.")
 
     pages = max(1, int(pages))
+    n_modifiers = max(1, min(int(n_modifiers), len(_QUERY_MODIFIERS)))
+    mods = _QUERY_MODIFIERS[:n_modifiers]   # ""(원본) + best/top rated/...
     # Try to find the HF category from the hint or the first keyword.
     hf_cat = hf_category_hint or dataset_lookup.map_category(simplified[0])
     node = spark_urls.HF_TO_BROWSE_NODE.get(hf_cat or "", "")
     rows: list[SourcingRow] = []
     for kw in simplified:
-        for page in range(1, pages + 1):
-            rows.append(SourcingRow(
-                subcategory=category_label, base_product=kw, variant="",
-                brand="", keyword=kw, est_price=0.0,
-                amazon_node_id=node, asin="", review_count=0, page=page,
-            ))
+        for mod in mods:
+            mkw = f"{kw} {mod}".strip() if mod else kw
+            if mkw.lower() in seen and mod:
+                continue   # 원본은 이미 추가됨; modifier 결과가 원본과 중복이면 skip
+            for page in range(1, pages + 1):
+                rows.append(SourcingRow(
+                    subcategory=category_label, base_product=mkw, variant="",
+                    brand="", keyword=mkw, est_price=0.0,
+                    amazon_node_id=node, asin="", review_count=0, page=page,
+                ))
+            if mod:
+                seen.add(mkw.lower())
     base_rows = len(rows)
     if include_broad and hf_cat:
         for kw in spark_urls.HF_BROAD_KEYWORDS.get(hf_cat, []):
@@ -288,12 +299,14 @@ def spark_keywords_list(keywords: list[str], category_label: str,
                     amazon_node_id=node, asin="", review_count=0, page=page,
                 ))
     broad_added = len(rows) - base_rows
+    mod_note = f" × {n_modifiers} modifier" if n_modifiers > 1 else ""
     page_note = f" × {pages}페이지" if pages > 1 else ""
+    broad_factor = max(1, n_modifiers) * pages
     summary = (
         f"'{category_label}' 분석 키워드 기반 Spark URL — "
         f"{len(simplified)}개 분석 키워드"
-        f"{f' + {broad_added // pages}개 {hf_cat} 브로드' if broad_added else ''}"
-        f"{page_note} = 총 **{len(rows)}개** URL. "
+        f"{f' + {broad_added // broad_factor}개 {hf_cat} 브로드' if broad_added else ''}"
+        f"{mod_note}{page_note} = 총 **{len(rows)}개** URL. "
         f"매핑 HF: {hf_cat or '미매핑'}, 노드: {node or 'n/a'}. "
         f"예상 수확: ~{len(rows) * 60:,}+ 상품 (URL당 ~60)."
     )

@@ -92,17 +92,30 @@ def render_bulk_sourcing_section() -> None:
         # 거부됨 — 분석 키워드는 이미 검증된 실 검색어라 안전.)
         query_text = analyzed   # label/UI 표시용. 실제 쿼리는 result.keywords
         st.info(f"타겟: **{analyzed}** (분석된 {len(result.keywords)}개 키워드 풀 사용)")
-        n_var = st.slider("사용할 분석 키워드 수 (검색량 상위)", 3, 50, 12,
-                          key="bulk_nvar_t")
+        c1, c2 = st.columns(2)
+        n_var = c1.slider("사용할 분석 키워드 수 (검색량 상위)", 5, 100, 50,
+                          key="bulk_nvar_t",
+                          help="분석된 키워드 풀에서 검색량 상위 N개 추출 → 각각 Spark URL로")
+        n_pages_t = c2.slider("페이지 깊이", 1, 5, 3, key="bulk_pages_t",
+                               help="각 키워드를 page 1..N으로 사전 확장")
+        n_modifiers = st.slider("키워드당 modifier 변형 수", 1, 5, 3,
+                                 key="bulk_mods_t",
+                                 help="각 키워드에 best/top rated 등 modifier 1~5종 부여. "
+                                      "1=원본만, 3=원본+2 변형")
         include_broad_t = st.checkbox(
             "🌐 매핑 카테고리의 브로드 키워드도 포함 (URL 수 ↑, 5만+ 목표 시 권장)",
             value=True, key="bulk_broad_t",
-            help="예: reading nook → Home_and_Kitchen 브로드 키워드 26개 추가 "
-                 "= 12+26=38 URL, 예상 ~34K 상품.")
+            help="매핑된 HF 카테고리의 10~26개 broad 키워드 추가 (× 페이지 × modifier)")
         st.session_state["_bulk_target_broad"] = include_broad_t
-        msg = f"→ {n_var}개 변형"
-        if include_broad_t:
-            msg += " + 매핑 카테고리 브로드 키워드 (예상 +26개)"
+        st.session_state["_bulk_target_pages"] = n_pages_t
+        st.session_state["_bulk_target_mods"] = n_modifiers
+        # 예상 URL = (분석 N + broad ~26) × modifier × page
+        est_base = n_var + (26 if include_broad_t else 0)
+        est_total = est_base * n_modifiers * n_pages_t
+        msg = (f"= {n_var} 분석 키워드"
+               + (" + ~26 broad" if include_broad_t else "")
+               + f" × {n_modifiers} modifier × {n_pages_t} 페이지 "
+               f"= **~{est_total:,}개 URL** (예상 수확 ~{est_total * 60:,}+ 상품)")
         st.caption(msg)
     elif is_custom:
         query_text = st.text_input("키워드 입력",
@@ -131,12 +144,15 @@ def render_bulk_sourcing_section() -> None:
                 # 분석된 키워드 풀에서 검색량 상위 N개 → Spark URL (샵 컨셉명
                 # 거부 우회: 분석 키워드는 이미 실 검색어로 검증됨)
                 broad = st.session_state.get("_bulk_target_broad", False)
+                pages_t = st.session_state.get("_bulk_target_pages", 1)
+                mods_t = st.session_state.get("_bulk_target_mods", 1)
                 top_kws = sorted(result.keywords,
                                  key=lambda k: getattr(k, "est_monthly_volume", 0) or 0,
                                  reverse=True)[:n_var]
                 res = bulk_sourcing.spark_keywords_list(
                     keywords=[k.term for k in top_kws],
-                    category_label=analyzed, include_broad=broad)
+                    category_label=analyzed, pages=pages_t,
+                    n_modifiers=mods_t, include_broad=broad)
             else:  # is_custom
                 broad = st.session_state.get("_bulk_custom_broad", False)
                 res = bulk_sourcing.spark_query_list(
