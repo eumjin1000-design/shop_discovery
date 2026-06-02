@@ -80,12 +80,20 @@ def render_bulk_sourcing_section() -> None:
                 st.dataframe(preview, width="stretch", hide_index=True)
     elif is_target:
         analyzed = st.session_state.get("category_input", "")
+        result = st.session_state.get("result")
         if not analyzed:
             st.warning("⚠️ 먼저 위 분석 폼에서 카테고리 분석을 진행하세요.")
             return
-        st.info(f"타겟: **{analyzed}** (위에서 분석한 카테고리)")
-        query_text = analyzed
-        n_var = st.slider("키워드 변형 수", 3, 12, 12, key="bulk_nvar_t")
+        if not result or not getattr(result, "keywords", None):
+            st.warning("⚠️ 분석 결과가 없습니다. 위에서 '🔍 분석 실행'을 먼저 완료하세요.")
+            return
+        # 샵 컨셉명을 raw 쿼리로 쓰지 않고, 분석된 키워드 풀에서 직접 추출.
+        # (Standing Workday Ergonomics 같은 컨셉명은 spark_query_list 필터에
+        # 거부됨 — 분석 키워드는 이미 검증된 실 검색어라 안전.)
+        query_text = analyzed   # label/UI 표시용. 실제 쿼리는 result.keywords
+        st.info(f"타겟: **{analyzed}** (분석된 {len(result.keywords)}개 키워드 풀 사용)")
+        n_var = st.slider("사용할 분석 키워드 수 (검색량 상위)", 3, 50, 12,
+                          key="bulk_nvar_t")
         include_broad_t = st.checkbox(
             "🌐 매핑 카테고리의 브로드 키워드도 포함 (URL 수 ↑, 5만+ 목표 시 권장)",
             value=True, key="bulk_broad_t",
@@ -119,10 +127,18 @@ def render_bulk_sourcing_section() -> None:
             elif is_direct:
                 res = bulk_sourcing.bulk_sourcing_list(selected,
                                                        n_per_cat=n_per_cat)
-            else:  # is_target or is_custom
-                broad = st.session_state.get(
-                    "_bulk_target_broad" if is_target else "_bulk_custom_broad",
-                    False)
+            elif is_target:
+                # 분석된 키워드 풀에서 검색량 상위 N개 → Spark URL (샵 컨셉명
+                # 거부 우회: 분석 키워드는 이미 실 검색어로 검증됨)
+                broad = st.session_state.get("_bulk_target_broad", False)
+                top_kws = sorted(result.keywords,
+                                 key=lambda k: getattr(k, "est_monthly_volume", 0) or 0,
+                                 reverse=True)[:n_var]
+                res = bulk_sourcing.spark_keywords_list(
+                    keywords=[k.term for k in top_kws],
+                    category_label=analyzed, include_broad=broad)
+            else:  # is_custom
+                broad = st.session_state.get("_bulk_custom_broad", False)
                 res = bulk_sourcing.spark_query_list(
                     query_text, n_variations=n_var, include_broad=broad)
             path = sourcing_report.write_sourcing_report(
